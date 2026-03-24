@@ -1,0 +1,4296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Golden Detective 黄金侦探</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+SC:wght@400;700&display=swap');
+
+:root {
+  --bg: #f0ede8;
+  --bg2: #e8e4de;
+  --card: #faf8f4;
+  --border: #c8c0b8;
+  --border2: #a89890;
+  --purple: #7c5cbf;
+  --purple-light: #a07de0;
+  --purple-dark: #5a3fa0;
+  --green: #4a9c6a;
+  --green-light: #6ab888;
+  --green-dark: #2d7a4f;
+  --text: #2a2220;
+  --text2: #5a504a;
+  --text3: #8a7a72;
+  --gold: #c8a840;
+  --red: #c04840;
+  --blue: #4878b0;
+  --shadow: 0 4px 0 #a89890;
+  --shadow-sm: 0 2px 0 #a89890;
+  --pixel: 'Press Start 2P', monospace;
+  --body: 'Noto Sans SC', sans-serif;
+  --cell-size: 48px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 0;
+}
+
+/* Pixel grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(124,92,191,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,92,191,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== SCREENS ===== */
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(124,92,191,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,92,191,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  isolation: auto;
+}
+.screen.active { display: block; }
+
+/* ===== AUTH SCREEN ===== */
+
+.site-title {
+  font-family: var(--pixel);
+  font-size: clamp(16px, 4vw, 28px);
+  color: #e8960a;
+  text-shadow: 3px 3px 0 #a05800, 1px 1px 0 #ffc840;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: 2px;
+  animation: titleFloat 3s ease-in-out infinite;
+}
+@keyframes titleFloat {
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+
+.site-subtitle {
+  font-family: var(--pixel);
+  font-size: clamp(10px, 2vw, 13px);
+  color: var(--green);
+  margin-bottom: 24px;
+  text-align: center;
+  letter-spacing: 3px;
+  position: relative;
+  z-index: 2;
+}
+.subtitle-star {
+  display: inline-block;
+  color: #e8960a;
+  animation: starTwinkle 1.4s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(232,150,10,0.9), 0 0 16px rgba(255,200,60,0.6);
+}
+#star-left  { animation-delay: 0s; }
+#star-right { animation-delay: 0.7s; }
+@keyframes starTwinkle {
+  0%,100% { transform: scale(1)   rotate(0deg);  opacity: 1;   }
+  25%     { transform: scale(1.5) rotate(20deg);  opacity: 0.6; }
+  50%     { transform: scale(0.7) rotate(-10deg); opacity: 1;   }
+  75%     { transform: scale(1.3) rotate(15deg);  opacity: 0.7; }
+}
+
+#auth-screen {
+  padding: 32px 16px 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.auth-box {
+  background: var(--card);
+  border: 3px solid var(--border);
+  box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,0.08);
+  border-radius: 2px;
+  padding: 28px 28px 24px;
+  width: 100%;
+  max-width: 380px;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+.auth-box::before, .auth-box::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-color: var(--purple);
+  border-style: solid;
+}
+.auth-box::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; }
+.auth-box::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
+#auth-screen .btn { font-size: 16px; padding: 14px 20px; }
+
+.auth-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid rgba(124,92,191,0.28);
+}
+.auth-tab {
+  font-family: var(--pixel);
+  font-size: 16px;
+  padding: 12px 22px;
+  cursor: pointer;
+  color: var(--text3);
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  letter-spacing: 2px;
+}
+.auth-tab:hover { color: var(--purple-light); }
+.auth-tab.active {
+  color: var(--purple);
+  border-bottom-color: var(--purple);
+}
+
+.form-group { margin-bottom: 18px; }
+
+.form-label {
+  font-family: var(--pixel);
+  font-size: 16px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+.form-label::before {
+  content: '▶';
+  font-size: 12px;
+  color: var(--purple);
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--pixel);
+  font-size: 16px;
+  letter-spacing: 1px;
+  border-radius: 1px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  caret-color: #a07de0;
+}
+.form-input::placeholder {
+  color: rgba(124,92,191,0.35);
+  font-family: var(--pixel);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.form-input:focus {
+  border-color: var(--purple);
+
+  background: var(--bg);
+}
+
+.avatar-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.av-tab {
+  font-family: var(--pixel);
+  font-size: 7px;
+  padding: 5px 8px;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.12s;
+}
+.av-tab.active {
+  background: var(--purple);
+  color: #fff;
+  border-color: var(--purple-dark);
+}
+.av-tab:hover:not(.active) { border-color: var(--purple); color: var(--purple); }
+
+.avatar-scroll-box {
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  padding: 8px;
+  max-height: 148px;
+  overflow-y: auto;
+}
+.avatar-select {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.avatar-opt {
+  width: 100%; aspect-ratio: 1;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.1s;
+}
+.avatar-opt:hover { border-color: var(--purple); transform: scale(1.1); background: rgba(124,92,191,0.08); }
+.avatar-opt.selected { border-color: var(--purple); background: rgba(124,92,191,0.15); box-shadow: 0 0 0 2px var(--purple-light); }
+.avatar-opt.hidden-av { display: none; }
+
+.av-selected-preview {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.av-selected-preview span { font-size: 22px; }
+
+.btn {
+  font-family: var(--pixel);
+  font-size: 9px;
+  padding: 12px 20px;
+  border: 2px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn:active { transform: translateY(2px); }
+.btn-primary {
+  background: var(--purple);
+  color: #fff;
+  border-color: var(--purple-dark);
+  box-shadow: 0 3px 0 var(--purple-dark);
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+.btn-primary:hover { background: var(--purple-light); }
+.btn-primary:active { box-shadow: none; }
+
+.btn-green {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green-dark);
+  box-shadow: 0 3px 0 var(--green-dark);
+  justify-content: center;
+}
+.btn-green:hover { background: var(--green-light); }
+.btn-green:active { box-shadow: none; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.btn-ghost:hover { border-color: var(--purple); color: var(--purple); }
+.btn-ghost:active { box-shadow: none; }
+
+.err-msg {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--red);
+  margin-top: 8px;
+  display: none;
+}
+.err-msg.show { display: block; }
+
+/* Auth-specific button override */
+#auth-screen .btn-primary {
+  background: linear-gradient(135deg, #e8960a, #c87000);
+  color: #fff;
+  border-color: #a05800;
+  box-shadow: 0 3px 0 #7a3e00, 0 0 14px rgba(232,150,10,0.35);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 14px 20px;
+  margin-top: 12px;
+  text-shadow: 0 1px 2px rgba(100,50,0,0.4);
+}
+#auth-screen .btn-primary:hover {
+  background: linear-gradient(135deg, #ffc030, #e8960a);
+  box-shadow: 0 3px 0 #7a3e00, 0 0 20px rgba(255,180,40,0.5);
+}
+#auth-screen .btn-primary:active {
+  box-shadow: 0 0 10px rgba(232,150,10,0.3);
+}
+
+/* Auth avatar area dark styling */
+#auth-screen .avatar-category-tabs { margin-top: 10px; }
+#auth-screen .av-tab {
+  background: rgba(30,20,50,0.7);
+  border-color: rgba(124,92,191,0.3);
+  color: rgba(200,168,255,0.4);
+}
+#auth-screen .av-tab.active {
+  background: rgba(124,92,191,0.5);
+  border-color: var(--purple);
+  color: var(--text);
+}
+#auth-screen .av-tab:hover:not(.active) {
+  border-color: var(--purple);
+  color: rgba(200,168,255,0.75);
+}
+#auth-screen .avatar-scroll-box {
+  background: rgba(10,6,22,0.6);
+  border-color: rgba(124,92,191,0.3);
+}
+#auth-screen .avatar-opt {
+  background: rgba(30,20,50,0.6);
+  border-color: rgba(124,92,191,0.25);
+}
+#auth-screen .avatar-opt:hover {
+  border-color: var(--purple);
+  background: rgba(124,92,191,0.2);
+}
+#auth-screen .avatar-opt.selected {
+  border-color: #c8a8ff;
+  background: rgba(124,92,191,0.25);
+  box-shadow: 0 0 0 2px rgba(160,125,224,0.4), 0 0 10px rgba(160,125,224,0.25);
+}
+#auth-screen .av-selected-preview {
+  color: rgba(200,168,255,0.5);
+}
+
+/* ===== HOME SCREEN ===== */
+#home-screen {}
+
+.topbar {
+  background: var(--card);
+  border-bottom: 3px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.topbar-title {
+  font-family: var(--pixel);
+  font-size: clamp(10px, 2vw, 14px);
+  color: #e8960a;
+  text-shadow: 1px 1px 0 #a05800;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-avatar-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.user-avatar {
+  width: 36px; height: 36px;
+  border: 2px solid var(--purple);
+  border-radius: 2px;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+}
+.user-name {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text2);
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+.topbar-btns { display: flex; gap: 8px; }
+.topbar-btn {
+  font-family: var(--pixel);
+  font-size: 11px;
+  padding: 8px 14px;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.1s;
+}
+.topbar-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+.home-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+
+.section-title {
+  font-family: var(--pixel);
+  font-size: clamp(9px, 2vw, 12px);
+  color: var(--text2);
+  margin-bottom: 20px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+@media(max-width:480px){ .themes-grid { grid-template-columns: repeat(2,1fr); } }
+
+.theme-card {
+  background: var(--card);
+  border: 3px solid var(--border);
+  border-radius: 4px;
+  padding: 16px 12px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.theme-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(232,150,10,0.06), transparent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.theme-card:hover { border-color: #e8960a; transform: translateY(-3px); box-shadow: 0 6px 0 var(--border2); }
+.theme-card:hover::before { opacity: 1; }
+.theme-card:active { transform: translateY(0); box-shadow: var(--shadow); }
+
+.theme-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+  image-rendering: pixelated;
+}
+.theme-name {
+  font-family: var(--pixel);
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: 0;
+  margin-top: 6px;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  image-rendering: pixelated;
+}
+
+.theme-icon-svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto 10px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.theme-card.random { border-color: var(--gold); }
+.info-block {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.info-badge {
+  font-family: var(--pixel);
+  font-size: 8px;
+  padding: 4px 10px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.info-badge.diff1 { background: rgba(74,156,106,0.15); color: var(--green-dark); border: 2px solid var(--green); }
+.info-badge.diff2 { background: rgba(124,92,191,0.12); color: var(--purple-dark); border: 2px solid var(--purple); }
+.info-desc {
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.info-desc strong { color: var(--gold); font-weight: 700; }
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+@media(max-width:540px){ .skill-grid { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:340px){ .skill-grid { grid-template-columns: 1fr; } }
+
+.skill-item {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 12px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.skill-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+.skill-name {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--purple);
+  margin-bottom: 6px;
+}
+.skill-desc {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.6;
+}
+
+.theme-card.random:hover { border-color: var(--gold); background: rgba(200,168,64,0.05); }
+.theme-card.random .theme-name { color: var(--gold); }
+
+/* ===== GAME SCREEN ===== */
+#game-screen { background: var(--bg); }
+
+.game-header {
+  background: var(--card);
+  border-bottom: 3px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.game-title {
+  font-family: var(--pixel);
+  font-size: clamp(8px, 1.5vw, 11px);
+  color: var(--purple);
+  flex: 1;
+}
+.stat-chip {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 10px;
+  font-family: var(--pixel);
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stat-chip .val { color: var(--purple); }
+.timer-chip .val { color: var(--green); }
+
+.game-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+
+/* MAP */
+.map-container {
+  position: relative;
+  overflow: auto;
+  max-width: 100%;
+  touch-action: pan-x pan-y;
+  user-select: none;
+  cursor: default;
+}
+.map-wrapper {
+  display: inline-block;
+  transform-origin: top left;
+  transition: transform 0.1s;
+}
+.map-table {
+  border-collapse: collapse;
+  border: 3px solid var(--border2);
+  background: var(--card);
+  box-shadow: 4px 4px 0 var(--border2);
+}
+.map-table th, .map-table td {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  text-align: center;
+  vertical-align: middle;
+}
+.map-table th {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 4px;
+}
+.map-cell {
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--bg2);
+  transition: background 0.1s, transform 0.1s;
+  position: relative;
+  font-family: var(--pixel);
+  font-size: 7px;
+}
+.map-cell:hover { background: rgba(124,92,191,0.15); }
+.map-cell.hidden {
+  background: linear-gradient(135deg, #d8d0c8 0%, #ccc4bc 100%);
+  border-color: #b8b0a8 #a8a09890 #a8a09890 #b8b0a8;
+  border-width: 2px;
+}
+.map-cell.hidden:hover { background: linear-gradient(135deg, #c8c0b8, #b8b0a8); }
+.map-cell.revealed { cursor: default; }
+.map-cell.revealed:hover { background: var(--bg2); }
+
+/* Cell type colors when revealed */
+.map-cell.type-treasure {
+  background: linear-gradient(135deg, rgba(255,220,60,0.35), rgba(200,168,64,0.25));
+  border: 2px solid #c8a840 !important;
+  box-shadow: inset 0 0 8px rgba(200,168,64,0.3), 0 0 6px rgba(200,168,64,0.4);
+  animation: treasureGlow 1.8s ease-in-out infinite;
+}
+@keyframes treasureGlow {
+  0%,100% { box-shadow: inset 0 0 8px rgba(200,168,64,0.3), 0 0 6px rgba(200,168,64,0.4); }
+  50%     { box-shadow: inset 0 0 14px rgba(200,168,64,0.5), 0 0 14px rgba(200,168,64,0.7); }
+}
+.map-cell.type-hint { background: rgba(74,156,106,0.15); }
+.map-cell.type-firecracker { background: rgba(220,80,60,0.15); }
+.map-cell.type-bomb { background: rgba(140,40,40,0.18); }
+.map-cell.type-angel { background: rgba(72,120,176,0.15); }
+.map-cell.type-challenge { background: rgba(124,92,191,0.15); }
+.map-cell.type-empty { background: rgba(200,200,200,0.15); }
+.map-cell.type-empty .cell-icon { font-size: 18px; color: var(--border2); opacity: 0.6; }
+
+/* Eliminated cells */
+.map-cell.eliminated .cell-inner { justify-content: center !important; }
+.map-cell.eliminated {
+  background: rgba(160,152,144,0.3);
+  opacity: 0.6;
+}
+
+.cell-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  padding: 2px 2px 3px;
+}
+.cell-icon { font-size: clamp(14px, 2.5vw, 20px); line-height: 1; }
+.map-cell.type-treasure .cell-icon { font-size: clamp(18px, 3vw, 26px); filter: drop-shadow(0 0 4px rgba(200,168,64,0.8)); }
+.cell-label { font-size: clamp(6px, 1vw, 9px); color: var(--text2); margin-top: 2px; }
+.map-cell.type-treasure .cell-label { color: #c8a840; font-weight: bold; }
+.cell-question {
+  font-size: clamp(18px, 3vw, 26px);
+  font-family: var(--pixel);
+  color: var(--theme-accent, var(--purple));
+  opacity: 0.55;
+  line-height: 1;
+  display: block;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+.map-cell.hidden .cell-inner { justify-content: center !important; }
+
+/* Stars for treasure */
+.cell-star { color: var(--gold); }
+
+
+/* ===== BOMB EXPLOSION EFFECTS ===== */
+.bomb-flash {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), rgba(255,160,40,0.55) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 999;
+  animation: bombFlash 0.5s ease-out forwards;
+}
+@keyframes bombFlash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.bomb-shockwave {
+  position: fixed;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 4px solid rgba(255,140,20,0.8);
+  pointer-events: none;
+  z-index: 998;
+  transform: translate(-50%, -50%) scale(1);
+  animation: shockwave 0.6s ease-out forwards;
+}
+@keyframes shockwave {
+  0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.9; border-width: 4px; }
+  100% { transform: translate(-50%,-50%) scale(22);  opacity: 0;   border-width: 1px; }
+}
+
+.bomb-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 997;
+  font-size: 16px;
+  animation: bombParticle ease-out forwards;
+}
+@keyframes bombParticle {
+  0%   { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(720deg); }
+}
+
+/* Cell eliminated flash */
+.map-cell.eliminating {
+  animation: cellEliminate 0.4s ease-out forwards;
+}
+@keyframes cellEliminate {
+  0%   { background: rgba(255,160,40,0.7); transform: scale(1.08); }
+  100% { background: rgba(160,152,144,0.3); transform: scale(1); opacity: 0.6; }
+}
+
+/* ===== MODALS ===== */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(40,32,28,0.6);
+  backdrop-filter: blur(2px);
+  z-index: 99999;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.overlay.show { display: flex !important; pointer-events: auto !important; }
+
+.modal {
+  background: var(--card);
+  border: 3px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 6px 6px 0 var(--border2);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalIn 0.2s ease;
+}
+@keyframes modalIn {
+  from { transform: scale(0.9) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-header {
+  padding: 16px 20px 12px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-family: var(--pixel);
+  font-size: clamp(8px, 1.5vw, 11px);
+  color: var(--purple);
+}
+.modal-close {
+  font-family: var(--pixel);
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--text3);
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+.modal-close:hover { color: var(--red); border-color: var(--red); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 12px 20px 16px;
+  border-top: 2px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Difficulty modal */
+.diff-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.diff-card {
+  background: var(--bg2);
+  border: 3px solid var(--border);
+  border-radius: 3px;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s;
+}
+.diff-card:hover { border-color: var(--purple); transform: translateY(-2px); }
+.diff-card:active { transform: translateY(0); box-shadow: none; }
+.diff-num {
+  font-family: var(--pixel);
+  font-size: 24px;
+  color: var(--purple);
+  display: block;
+  margin-bottom: 6px;
+}
+.diff-label {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text2);
+}
+.diff-size {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* Confirm modal */
+.confirm-coords {
+  font-family: var(--pixel);
+  font-size: 16px;
+  color: var(--purple);
+  text-align: center;
+  padding: 8px 0 16px;
+}
+.confirm-text {
+  font-size: 13px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Challenge modal */
+.challenge-info {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.challenge-tag {
+  font-family: var(--pixel);
+  font-size: 7px;
+  background: rgba(124,92,191,0.15);
+  color: var(--purple);
+  padding: 3px 8px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.review-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 13px;
+  border-radius: 2px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+}
+.review-input:focus { border-color: var(--purple); }
+.char-count {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text3);
+  margin-top: 4px;
+  text-align: right;
+}
+.char-count.ok { color: var(--green); }
+
+/* Bomb modal */
+.bomb-directions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.dir-btn {
+  font-family: var(--pixel);
+  font-size: 8px;
+  padding: 14px 10px;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.dir-btn:hover { border-color: var(--red); color: var(--red); transform: translateY(-2px); }
+.dir-btn:active { box-shadow: none; transform: translateY(0); }
+.dir-icon { font-size: 16px; }
+
+/* Hint/Angel modal */
+.hint-box {
+  background: rgba(74,156,106,0.1);
+  border: 2px solid var(--green);
+  border-radius: 3px;
+  padding: 16px;
+  text-align: center;
+  font-family: var(--pixel);
+  font-size: 10px;
+  color: var(--green-dark);
+  line-height: 1.8;
+}
+.hint-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+
+/* Win modal */
+.win-modal { text-align: center; }
+.win-stars {
+  font-size: 48px;
+  display: block;
+  margin: 0 auto 16px;
+  animation: winSpin 1s ease-out;
+}
+@keyframes winSpin {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.win-title {
+  font-family: var(--pixel);
+  font-size: clamp(12px, 3vw, 18px);
+  color: var(--gold);
+  margin-bottom: 12px;
+  text-shadow: 2px 2px 0 rgba(200,168,64,0.4);
+}
+.win-time {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--purple);
+  margin-bottom: 8px;
+}
+.win-msg { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+/* ===== STAR RAIN ===== */
+.star-rain-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 500;
+  overflow: hidden;
+}
+.star-particle {
+  position: absolute;
+  font-size: 20px;
+  animation: starFall linear forwards;
+  opacity: 0;
+}
+@keyframes starFall {
+  0% { opacity: 1; transform: translateY(-50px) rotate(0deg) scale(0.5); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(110vh) rotate(720deg) scale(1.2); }
+}
+
+/* ===== PROFILE SCREEN ===== */
+#profile-screen {}
+
+.profile-content {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.profile-card {
+  background: var(--card);
+  border: 3px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.profile-avatar {
+  width: 64px; height: 64px;
+  border: 3px solid var(--purple);
+  border-radius: 3px;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  flex-shrink: 0;
+}
+.profile-name {
+  font-family: var(--pixel);
+  font-size: clamp(10px, 2vw, 14px);
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.profile-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pstat {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text2);
+}
+.pstat span { color: var(--purple); }
+
+.history-list { display: flex; flex-direction: column; gap: 12px; }
+.history-item {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.history-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.history-tag {
+  font-family: var(--pixel);
+  font-size: 7px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  background: rgba(124,92,191,0.1);
+  color: var(--purple);
+}
+.history-task { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.history-review {
+  font-size: 12px;
+  color: var(--text3);
+  background: var(--bg2);
+  padding: 8px 10px;
+  border-radius: 2px;
+  border-left: 3px solid var(--purple-light);
+  line-height: 1.6;
+}
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text3);
+  font-family: var(--pixel);
+  font-size: 9px;
+  line-height: 2;
+}
+
+/* ===== SAVED GAMES ===== */
+.saved-list { display: flex; flex-direction: column; gap: 10px; }
+.saved-item {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.saved-info { flex: 1; }
+.saved-title {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.saved-sub {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text3);
+}
+
+/* ===== ZOOM CONTROLS ===== */
+.zoom-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.zoom-btn {
+  width: 32px; height: 32px;
+  font-family: var(--pixel);
+  font-size: 14px;
+  border: 2px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  color: var(--text2);
+}
+.zoom-btn:hover { border-color: var(--purple); color: var(--purple); }
+.zoom-val {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+  min-width: 32px;
+  text-align: center;
+}
+
+/* Instructions */
+.legend {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 100%;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text2);
+}
+.legend-icon { font-size: 14px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--purple-light); }
+
+/* Pixel decorative corners */
+.pixel-corners {
+  position: relative;
+}
+.pixel-corners::before, .pixel-corners::after {
+  content: '';
+  position: absolute;
+  width: 8px; height: 8px;
+  background: var(--purple);
+}
+.pixel-corners::before { top: -3px; left: -3px; }
+.pixel-corners::after { bottom: -3px; right: -3px; }
+
+@media(max-width:600px) {
+  :root { --cell-size: 38px; }
+  .game-header { gap: 6px; }
+  .stat-chip { padding: 3px 6px; font-size: 7px; }
+}
+
+/* Announcement bar */
+.announce {
+  font-family: var(--pixel);
+  font-size: 8px;
+  background: rgba(124,92,191,0.1);
+  color: var(--purple);
+  padding: 6px 20px;
+  text-align: center;
+  border-bottom: 2px solid rgba(124,92,191,0.15);
+}
+
+
+/* ── Footer ── */
+.site-footer {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+  text-align: center;
+  padding: 16px 0 20px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+.site-footer .creator-name {
+  color: #e8960a;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px rgba(232,150,10,0.5);
+}
+.footer-star {
+  display: inline-block;
+  font-size: 10px;
+  animation: footerStarSpin 2s ease-in-out infinite;
+  color: #e8960a;
+  opacity: 0.85;
+}
+.footer-star:nth-child(1) { animation-delay: 0s;    animation-name: footerStarA; }
+.footer-star:nth-child(3) { animation-delay: 0.6s;  animation-name: footerStarB; }
+.footer-star:nth-child(5) { animation-delay: 1.2s;  animation-name: footerStarA; }
+@keyframes footerStarA {
+  0%,100% { transform: scale(1)   rotate(0deg);   opacity: 0.85; }
+  40%     { transform: scale(1.6) rotate(30deg);  opacity: 1;    }
+  70%     { transform: scale(0.7) rotate(-15deg); opacity: 0.5;  }
+}
+@keyframes footerStarB {
+  0%,100% { transform: scale(1)   rotate(0deg);   opacity: 0.7; }
+  40%     { transform: scale(1.4) rotate(-25deg); opacity: 1;   }
+  70%     { transform: scale(0.8) rotate(20deg);  opacity: 0.4; }
+}
+
+
+/* ── Personal Leaderboard ── */
+.lb-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.lb-tab {
+  font-family: var(--pixel);
+  font-size: 7px;
+  padding: 5px 10px;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.12s;
+}
+.lb-tab.active {
+  background: #e8960a;
+  color: #fff;
+  border-color: #a05800;
+}
+.lb-tab:hover:not(.active) { border-color: #e8960a; color: #e8960a; }
+
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  font-size: 12px;
+}
+.lb-table th {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text3);
+  background: var(--bg2);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.lb-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+.lb-table tr:last-child td { border-bottom: none; }
+.lb-table tr:hover td { background: rgba(232,150,10,0.05); }
+.lb-rank {
+  font-family: var(--pixel);
+  font-size: 10px;
+  font-weight: bold;
+  width: 32px;
+}
+.lb-rank-1 { color: #c8a840; }
+.lb-rank-2 { color: #8a9aa0; }
+.lb-rank-3 { color: #b06030; }
+.lb-rank-other { color: var(--text3); }
+.lb-time {
+  font-family: var(--pixel);
+  font-size: 10px;
+  color: #e8960a;
+}
+.lb-theme-badge {
+  font-family: var(--pixel);
+  font-size: 6px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(232,150,10,0.12);
+  color: #a05800;
+  border: 1px solid rgba(232,150,10,0.3);
+}
+.lb-empty {
+  text-align: center;
+  padding: 32px;
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+  line-height: 2;
+}
+
+
+.welcome-msg {
+  font-size: 12px;
+  color: #c87800;
+  text-align: center;
+  line-height: 1.5;
+  padding: 8px 16px;
+  margin-bottom: 6px;
+  background: rgba(232,150,10,0.05);
+  border: 1px solid rgba(232,150,10,0.15);
+  border-radius: 3px;
+}
+
+
+
+/* Ensure register form and all children are hidden when display:none */
+#register-form[style*="display:none"],
+#register-form[style*="display: none"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+#register-form[style*="display:none"] *,
+#register-form[style*="display: none"] * {
+  display: none !important;
+}
+
+
+
+
+#auth-screen .btn-register {
+  background: linear-gradient(135deg, #e8960a, #c87000);
+  color: #fff;
+  border-color: #a05800;
+  box-shadow: 0 3px 0 #7a3e00, 0 0 14px rgba(232,150,10,0.35);
+  font-family: var(--pixel);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 14px 20px;
+  margin-top: 12px;
+  text-shadow: 0 1px 2px rgba(100,50,0,0.4);
+  border: 2px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#auth-screen .btn-register:hover { background: linear-gradient(135deg, #ffc030, #e8960a); }
+
+
+/* Form switching */
+#register-form.form-hidden {
+  display: none !important;
+}
+
+
+.topbar-btn-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.12s;
+  min-width: 52px;
+}
+.topbar-btn-icon:hover { border-color: #e8960a; background: rgba(232,150,10,0.08); }
+.tbtn-icon { font-size: 18px; line-height: 1; }
+.tbtn-label {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text2);
+}
+.topbar-btn-icon:hover .tbtn-label { color: #e8960a; }
+
+/* Bigger avatar/name space */
+.user-avatar-wrap {
+  min-width: 70px;
+  text-align: center;
+}
+.user-name {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--text2);
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  display: block;
+  letter-spacing: 0;
+}
+
+
+/* Treasure cell icon - gold glow */
+.yuanbao-icon {
+  font-size: clamp(18px, 2.8vw, 24px);
+  display: inline-block;
+  animation: yuanbaoGlow 2s ease-in-out infinite;
+  line-height: 1;
+}
+@keyframes yuanbaoGlow {
+  0%,100% { filter: drop-shadow(0 0 4px rgba(255,200,0,0.8)); }
+  50%     { filter: drop-shadow(0 0 10px rgba(255,215,0,1)) drop-shadow(0 0 18px rgba(255,180,0,0.7)); }
+}
+
+
+.welcome-star {
+  display: inline-block;
+  color: #e8960a;
+  font-size: 11px;
+  animation: starTwinkle 1.4s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(232,150,10,0.9), 0 0 16px rgba(255,200,60,0.6);
+}
+
+
+/* Peek map transparency */
+#bomb-overlay.peeking {
+  background: rgba(40,32,28,0.15) !important;
+}
+#bomb-overlay.peeking #bomb-modal {
+  opacity: 0.15 !important;
+  pointer-events: none;
+}
+#bomb-overlay.peeking #peek-map-btn {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+
+.leg-remain {
+  font-family: var(--pixel);
+  font-size: 6px;
+  color: #e8960a;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+
+.gln-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gln-wrap .gln { display: block; }
+
+/* Save btn */
+#save-btn {
+  font-family: var(--pixel);
+  font-size: 7px;
+  padding: 6px 10px;
+  border: 2px solid var(--green);
+  background: rgba(74,156,106,0.1);
+  color: var(--green-dark);
+  cursor: pointer;
+  border-radius: 2px;
+}
+#save-btn:hover { background: var(--green); color: #fff; }
+
+
+/* ── Redesigned game info section ── */
+.info-section {
+  margin-bottom: 24px;
+}
+.info-section-title {
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: #e8960a;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.info-diff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media(max-width:700px){ .info-diff-grid { grid-template-columns: 1fr; } }
+.info-diff-card {
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+.info-diff-card.diff1 { border-left: 4px solid var(--purple); }
+.info-diff-card.diff2 { border-left: 4px solid var(--green); }
+.diff-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.diff-badge {
+  font-family: var(--pixel);
+  font-size: 8px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  color: #fff;
+}
+.diff1 .diff-badge { background: var(--purple); }
+.diff2 .diff-badge { background: var(--green); }
+.diff3 .diff-badge { background: var(--blue); }
+.info-diff-card.diff3 { border-left: 4px solid var(--blue); }
+.diff-size {
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text3);
+}
+.diff-goal {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.diff-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.diff-chip {
+  font-family: var(--pixel);
+  font-size: 7px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 3px 7px;
+  border-radius: 2px;
+  color: var(--text2);
+}
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--card);
+}
+.skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.skill-row:last-child { border-bottom: none; }
+.skill-row-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.skill-row-name {
+  font-family: var(--pixel);
+  font-size: 9px;
+  color: var(--purple);
+  margin-bottom: 4px;
+}
+.skill-row-desc {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+
+/* ── In-game legend panel ── */
+.game-legend {
+  width: 100%;
+  max-width: 600px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  overflow: hidden;
+}
+.game-legend-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  font-family: var(--pixel);
+  font-size: 8px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg2);
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.game-legend-toggle:hover { color: var(--purple); border-bottom-color: var(--border); }
+.legend-arrow { transition: transform 0.2s; font-size: 8px; }
+.game-legend.open .legend-arrow { transform: rotate(180deg); }
+.game-legend-body {
+  display: none;
+  padding: 8px 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  overflow: hidden;
+}
+.game-legend.open .game-legend-body {
+  display: grid;
+}
+.gln-wrap { display:flex; flex-direction:column; align-items:flex-start; gap:1px; min-width:52px; }
+.game-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.gli { font-size: 16px; flex-shrink: 0; }
+.gln {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--purple);
+  flex-shrink: 0;
+  min-width: 44px;
+}
+.gld { font-size: 11px; color: var(--text2); line-height: 1.4; }
+@media(max-width:500px){ .game-legend-body { grid-template-columns: 1fr; } }
+
+#game-screen[data-theme] .game-legend { background: var(--theme-header, var(--card)); border-color: var(--theme-border, var(--border)); }
+#game-screen[data-theme] .game-legend-toggle { background: var(--theme-bg, var(--bg2)); }
+#game-screen[data-theme] .gln { color: var(--theme-accent, var(--purple)); }
+
+/* ── Per-theme game screen colour schemes ── */
+#game-screen[data-theme="literature"] { --theme-accent: #7c5cbf; --theme-bg: #f4f0fa; --theme-header: #ede4f8; --theme-border: #c4a8f0; }
+#game-screen[data-theme="mystery"]    { --theme-accent: #2a4a7a; --theme-bg: #eef2f8; --theme-header: #dce6f4; --theme-border: #9ab0d8; }
+#game-screen[data-theme="lightnovel"] { --theme-accent: #c8509a; --theme-bg: #fdf0f6; --theme-header: #fce0ef; --theme-border: #f0a8d0; }
+#game-screen[data-theme="movie"]      { --theme-accent: #1a1a2a; --theme-bg: #f0f0f4; --theme-header: #e0e0ea; --theme-border: #9090b0; }
+#game-screen[data-theme="general"]    { --theme-accent: #c87830; --theme-bg: #fdf6ee; --theme-header: #f8ead8; --theme-border: #e0b880; }
+#game-screen[data-theme="manga"]      { --theme-accent: #2a7a3a; --theme-bg: #eef8f0; --theme-header: #d8f0de; --theme-border: #80c890; }
+
+#game-screen[data-theme] { background: var(--theme-bg, var(--bg)); }
+#game-screen[data-theme] .game-header {
+  background: var(--theme-header, var(--card));
+  border-bottom-color: var(--theme-border, var(--border));
+}
+#game-screen[data-theme] .game-title { color: var(--theme-accent, var(--purple)); }
+#game-screen[data-theme] .stat-chip .val { color: var(--theme-accent, var(--purple)); }
+#game-screen[data-theme] .map-table { border-color: var(--theme-border, var(--border2)); box-shadow: 4px 4px 0 var(--theme-border, var(--border2)); }
+#game-screen[data-theme] .map-table th { background: var(--theme-header, var(--bg2)); border-color: var(--theme-border, var(--border)); color: var(--theme-accent, var(--text3)); }
+#game-screen[data-theme] #save-btn { border-color: var(--theme-accent, var(--green)); color: var(--theme-accent, var(--green-dark)); }
+#game-screen[data-theme] .zoom-btn:hover { border-color: var(--theme-accent, var(--purple)); color: var(--theme-accent, var(--purple)); }
+
+/* Challenge draft tip */
+.challenge-draft-tip {
+  font-family: var(--pixel);
+  font-size: 7px;
+  color: var(--green);
+  text-align: center;
+  padding: 6px 20px 12px;
+  display: none;
+}
+.challenge-draft-tip.show { display: block; }
+
+
+/* Auth success toast */
+.auth-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-12px);
+  background: var(--green);
+  color: #fff;
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 12px 20px;
+  border-radius: 2px;
+  border: 2px solid var(--green-dark);
+  box-shadow: 0 3px 0 var(--green-dark), 0 6px 20px rgba(74,156,106,0.3);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.auth-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+</style>
+</head>
+<body>
+
+
+
+<!-- Gold Rain Container -->
+<div class="star-rain-container" id="starRain"></div>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div class="screen active" id="auth-screen">
+  <div class="site-title">黄金侦探</div>
+  <div class="site-subtitle"><span class="subtitle-star" id="star-left">★</span> GOLDEN DETECTIVE <span class="subtitle-star" id="star-right">★</span></div>
+  <div class="auth-box">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login',this)">登录</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register',this)">注册</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label class="form-label">昵称</label>
+        <input class="form-input" id="login-name" type="text" placeholder="输入您的昵称" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" id="login-pass" type="password" placeholder="输入密码">
+      </div>
+      <div class="err-msg" id="login-err">昵称或密码错误</div>
+      <button class="btn btn-primary" onclick="doLogin()">▶ 开始冒险</button>
+    </div>
+
+    <!-- REGISTER (hidden by default) -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label class="form-label">昵称</label>
+        <input class="form-input" id="reg-name" type="text" placeholder="给自己取个名字" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" id="reg-pass" type="password" placeholder="设置密码（至少4位）">
+      </div>
+      <div class="form-group">
+        <label class="form-label">选择头像</label>
+        <div class="avatar-category-tabs" id="avatar-tabs">
+          <button class="av-tab active" onclick="switchAvatarTab(this,'animals')">动物</button>
+          <button class="av-tab" onclick="switchAvatarTab(this,'fantasy')">幻想</button>
+          <button class="av-tab" onclick="switchAvatarTab(this,'nature')">自然</button>
+          <button class="av-tab" onclick="switchAvatarTab(this,'culture')">文艺</button>
+          <button class="av-tab" onclick="switchAvatarTab(this,'food')">食物</button>
+          <button class="av-tab" onclick="switchAvatarTab(this,'symbols')">符号</button>
+        </div>
+        <div class="avatar-scroll-box">
+          <div class="avatar-select" id="avatar-select">
+            <!-- animals -->
+            <div class="avatar-opt selected av-animals" data-av="🦊" onclick="selectAvatar(this)">🦊</div>
+            <div class="avatar-opt av-animals" data-av="🐉" onclick="selectAvatar(this)">🐉</div>
+            <div class="avatar-opt av-animals" data-av="🐺" onclick="selectAvatar(this)">🐺</div>
+            <div class="avatar-opt av-animals" data-av="🦁" onclick="selectAvatar(this)">🦁</div>
+            <div class="avatar-opt av-animals" data-av="🐼" onclick="selectAvatar(this)">🐼</div>
+            <div class="avatar-opt av-animals" data-av="🦋" onclick="selectAvatar(this)">🦋</div>
+            <div class="avatar-opt av-animals" data-av="🐬" onclick="selectAvatar(this)">🐬</div>
+            <div class="avatar-opt av-animals" data-av="🦉" onclick="selectAvatar(this)">🦉</div>
+            <div class="avatar-opt av-animals" data-av="🐸" onclick="selectAvatar(this)">🐸</div>
+            <div class="avatar-opt av-animals" data-av="🐯" onclick="selectAvatar(this)">🐯</div>
+            <div class="avatar-opt av-animals" data-av="🦝" onclick="selectAvatar(this)">🦝</div>
+            <div class="avatar-opt av-animals" data-av="🦨" onclick="selectAvatar(this)">🦨</div>
+            <div class="avatar-opt av-animals" data-av="🐻" onclick="selectAvatar(this)">🐻</div>
+            <div class="avatar-opt av-animals" data-av="🐨" onclick="selectAvatar(this)">🐨</div>
+            <div class="avatar-opt av-animals" data-av="🦘" onclick="selectAvatar(this)">🦘</div>
+            <div class="avatar-opt av-animals" data-av="🦦" onclick="selectAvatar(this)">🦦</div>
+            <div class="avatar-opt av-animals" data-av="🦥" onclick="selectAvatar(this)">🦥</div>
+            <div class="avatar-opt av-animals" data-av="🐙" onclick="selectAvatar(this)">🐙</div>
+            <div class="avatar-opt av-animals" data-av="🦑" onclick="selectAvatar(this)">🦑</div>
+            <div class="avatar-opt av-animals" data-av="🦈" onclick="selectAvatar(this)">🦈</div>
+            <div class="avatar-opt av-animals" data-av="🦜" onclick="selectAvatar(this)">🦜</div>
+            <div class="avatar-opt av-animals" data-av="🦩" onclick="selectAvatar(this)">🦩</div>
+            <div class="avatar-opt av-animals" data-av="🦚" onclick="selectAvatar(this)">🦚</div>
+            <div class="avatar-opt av-animals" data-av="🐆" onclick="selectAvatar(this)">🐆</div>
+            <div class="avatar-opt av-animals" data-av="🦬" onclick="selectAvatar(this)">🦬</div>
+            <!-- fantasy -->
+            <div class="avatar-opt av-fantasy" data-av="🔮" onclick="selectAvatar(this)">🔮</div>
+            <div class="avatar-opt av-fantasy" data-av="🧙" onclick="selectAvatar(this)">🧙</div>
+            <div class="avatar-opt av-fantasy" data-av="🧝" onclick="selectAvatar(this)">🧝</div>
+            <div class="avatar-opt av-fantasy" data-av="🧚" onclick="selectAvatar(this)">🧚</div>
+            <div class="avatar-opt av-fantasy" data-av="🧜" onclick="selectAvatar(this)">🧜</div>
+            <div class="avatar-opt av-fantasy" data-av="🦄" onclick="selectAvatar(this)">🦄</div>
+            <div class="avatar-opt av-fantasy" data-av="👾" onclick="selectAvatar(this)">👾</div>
+            <div class="avatar-opt av-fantasy" data-av="🎭" onclick="selectAvatar(this)">🎭</div>
+            <div class="avatar-opt av-fantasy" data-av="🗡️" onclick="selectAvatar(this)">🗡️</div>
+            <div class="avatar-opt av-fantasy" data-av="🧛" onclick="selectAvatar(this)">🧛</div>
+            <div class="avatar-opt av-fantasy" data-av="🧟" onclick="selectAvatar(this)">🧟</div>
+            <div class="avatar-opt av-fantasy" data-av="🧞" onclick="selectAvatar(this)">🧞</div>
+            <div class="avatar-opt av-fantasy" data-av="🧠" onclick="selectAvatar(this)">🧠</div>
+            <div class="avatar-opt av-fantasy" data-av="👹" onclick="selectAvatar(this)">👹</div>
+            <div class="avatar-opt av-fantasy" data-av="👺" onclick="selectAvatar(this)">👺</div>
+            <div class="avatar-opt av-fantasy" data-av="🤖" onclick="selectAvatar(this)">🤖</div>
+            <div class="avatar-opt av-fantasy" data-av="👻" onclick="selectAvatar(this)">👻</div>
+            <div class="avatar-opt av-fantasy" data-av="💀" onclick="selectAvatar(this)">💀</div>
+            <div class="avatar-opt av-fantasy" data-av="🐲" onclick="selectAvatar(this)">🐲</div>
+            <div class="avatar-opt av-fantasy" data-av="🏯" onclick="selectAvatar(this)">🏯</div>
+            <div class="avatar-opt av-fantasy" data-av="⚔️" onclick="selectAvatar(this)">⚔️</div>
+            <div class="avatar-opt av-fantasy" data-av="🛡️" onclick="selectAvatar(this)">🛡️</div>
+            <div class="avatar-opt av-fantasy" data-av="🪄" onclick="selectAvatar(this)">🪄</div>
+            <div class="avatar-opt av-fantasy" data-av="🧿" onclick="selectAvatar(this)">🧿</div>
+            <div class="avatar-opt av-fantasy" data-av="🌀" onclick="selectAvatar(this)">🌀</div>
+            <!-- nature -->
+            <div class="avatar-opt av-nature" data-av="🌙" onclick="selectAvatar(this)">🌙</div>
+            <div class="avatar-opt av-nature" data-av="⭐" onclick="selectAvatar(this)">⭐</div>
+            <div class="avatar-opt av-nature" data-av="🌊" onclick="selectAvatar(this)">🌊</div>
+            <div class="avatar-opt av-nature" data-av="🌸" onclick="selectAvatar(this)">🌸</div>
+            <div class="avatar-opt av-nature" data-av="🍀" onclick="selectAvatar(this)">🍀</div>
+            <div class="avatar-opt av-nature" data-av="🌿" onclick="selectAvatar(this)">🌿</div>
+            <div class="avatar-opt av-nature" data-av="🌋" onclick="selectAvatar(this)">🌋</div>
+            <div class="avatar-opt av-nature" data-av="❄️" onclick="selectAvatar(this)">❄️</div>
+            <div class="avatar-opt av-nature" data-av="🌈" onclick="selectAvatar(this)">🌈</div>
+            <div class="avatar-opt av-nature" data-av="🌞" onclick="selectAvatar(this)">🌞</div>
+            <div class="avatar-opt av-nature" data-av="🌝" onclick="selectAvatar(this)">🌝</div>
+            <div class="avatar-opt av-nature" data-av="💫" onclick="selectAvatar(this)">💫</div>
+            <div class="avatar-opt av-nature" data-av="✨" onclick="selectAvatar(this)">✨</div>
+            <div class="avatar-opt av-nature" data-av="🌪️" onclick="selectAvatar(this)">🌪️</div>
+            <div class="avatar-opt av-nature" data-av="🔥" onclick="selectAvatar(this)">🔥</div>
+            <div class="avatar-opt av-nature" data-av="💧" onclick="selectAvatar(this)">💧</div>
+            <div class="avatar-opt av-nature" data-av="🌵" onclick="selectAvatar(this)">🌵</div>
+            <div class="avatar-opt av-nature" data-av="🍄" onclick="selectAvatar(this)">🍄</div>
+            <div class="avatar-opt av-nature" data-av="🌺" onclick="selectAvatar(this)">🌺</div>
+            <div class="avatar-opt av-nature" data-av="🌻" onclick="selectAvatar(this)">🌻</div>
+            <div class="avatar-opt av-nature" data-av="🌹" onclick="selectAvatar(this)">🌹</div>
+            <div class="avatar-opt av-nature" data-av="🍁" onclick="selectAvatar(this)">🍁</div>
+            <div class="avatar-opt av-nature" data-av="🌴" onclick="selectAvatar(this)">🌴</div>
+            <div class="avatar-opt av-nature" data-av="🌾" onclick="selectAvatar(this)">🌾</div>
+            <div class="avatar-opt av-nature" data-av="⛰️" onclick="selectAvatar(this)">⛰️</div>
+            <!-- culture -->
+            <div class="avatar-opt av-culture" data-av="🎨" onclick="selectAvatar(this)">🎨</div>
+            <div class="avatar-opt av-culture" data-av="📚" onclick="selectAvatar(this)">📚</div>
+            <div class="avatar-opt av-culture" data-av="🎵" onclick="selectAvatar(this)">🎵</div>
+            <div class="avatar-opt av-culture" data-av="🎬" onclick="selectAvatar(this)">🎬</div>
+            <div class="avatar-opt av-culture" data-av="✒️" onclick="selectAvatar(this)">✒️</div>
+            <div class="avatar-opt av-culture" data-av="🏆" onclick="selectAvatar(this)">🏆</div>
+            <div class="avatar-opt av-culture" data-av="🎯" onclick="selectAvatar(this)">🎯</div>
+            <div class="avatar-opt av-culture" data-av="🧩" onclick="selectAvatar(this)">🧩</div>
+            <div class="avatar-opt av-culture" data-av="🎲" onclick="selectAvatar(this)">🎲</div>
+            <div class="avatar-opt av-culture" data-av="🎸" onclick="selectAvatar(this)">🎸</div>
+            <div class="avatar-opt av-culture" data-av="🎹" onclick="selectAvatar(this)">🎹</div>
+            <div class="avatar-opt av-culture" data-av="🎻" onclick="selectAvatar(this)">🎻</div>
+            <div class="avatar-opt av-culture" data-av="🎺" onclick="selectAvatar(this)">🎺</div>
+            <div class="avatar-opt av-culture" data-av="🥁" onclick="selectAvatar(this)">🥁</div>
+            <div class="avatar-opt av-culture" data-av="🎤" onclick="selectAvatar(this)">🎤</div>
+            <div class="avatar-opt av-culture" data-av="🎧" onclick="selectAvatar(this)">🎧</div>
+            <div class="avatar-opt av-culture" data-av="🎮" onclick="selectAvatar(this)">🎮</div>
+            <div class="avatar-opt av-culture" data-av="🕹️" onclick="selectAvatar(this)">🕹️</div>
+            <div class="avatar-opt av-culture" data-av="🃏" onclick="selectAvatar(this)">🃏</div>
+            <div class="avatar-opt av-culture" data-av="♟️" onclick="selectAvatar(this)">♟️</div>
+            <div class="avatar-opt av-culture" data-av="🎪" onclick="selectAvatar(this)">🎪</div>
+            <div class="avatar-opt av-culture" data-av="🖼️" onclick="selectAvatar(this)">🖼️</div>
+            <div class="avatar-opt av-culture" data-av="📖" onclick="selectAvatar(this)">📖</div>
+            <div class="avatar-opt av-culture" data-av="🎓" onclick="selectAvatar(this)">🎓</div>
+            <div class="avatar-opt av-culture" data-av="🏛️" onclick="selectAvatar(this)">🏛️</div>
+            <!-- food -->
+            <div class="avatar-opt av-food" data-av="🍎" onclick="selectAvatar(this)">🍎</div>
+            <div class="avatar-opt av-food" data-av="🍓" onclick="selectAvatar(this)">🍓</div>
+            <div class="avatar-opt av-food" data-av="🍇" onclick="selectAvatar(this)">🍇</div>
+            <div class="avatar-opt av-food" data-av="🍑" onclick="selectAvatar(this)">🍑</div>
+            <div class="avatar-opt av-food" data-av="🍋" onclick="selectAvatar(this)">🍋</div>
+            <div class="avatar-opt av-food" data-av="🍊" onclick="selectAvatar(this)">🍊</div>
+            <div class="avatar-opt av-food" data-av="🥝" onclick="selectAvatar(this)">🥝</div>
+            <div class="avatar-opt av-food" data-av="🍒" onclick="selectAvatar(this)">🍒</div>
+            <div class="avatar-opt av-food" data-av="🫐" onclick="selectAvatar(this)">🫐</div>
+            <div class="avatar-opt av-food" data-av="🍕" onclick="selectAvatar(this)">🍕</div>
+            <div class="avatar-opt av-food" data-av="🍜" onclick="selectAvatar(this)">🍜</div>
+            <div class="avatar-opt av-food" data-av="🍣" onclick="selectAvatar(this)">🍣</div>
+            <div class="avatar-opt av-food" data-av="🍩" onclick="selectAvatar(this)">🍩</div>
+            <div class="avatar-opt av-food" data-av="🍦" onclick="selectAvatar(this)">🍦</div>
+            <div class="avatar-opt av-food" data-av="🧁" onclick="selectAvatar(this)">🧁</div>
+            <div class="avatar-opt av-food" data-av="🍫" onclick="selectAvatar(this)">🍫</div>
+            <div class="avatar-opt av-food" data-av="🧋" onclick="selectAvatar(this)">🧋</div>
+            <div class="avatar-opt av-food" data-av="🍵" onclick="selectAvatar(this)">🍵</div>
+            <div class="avatar-opt av-food" data-av="🍥" onclick="selectAvatar(this)">🍥</div>
+            <div class="avatar-opt av-food" data-av="🍡" onclick="selectAvatar(this)">🍡</div>
+            <div class="avatar-opt av-food" data-av="🍢" onclick="selectAvatar(this)">🍢</div>
+            <div class="avatar-opt av-food" data-av="🧆" onclick="selectAvatar(this)">🧆</div>
+            <div class="avatar-opt av-food" data-av="🥐" onclick="selectAvatar(this)">🥐</div>
+            <div class="avatar-opt av-food" data-av="🍰" onclick="selectAvatar(this)">🍰</div>
+            <div class="avatar-opt av-food" data-av="🎂" onclick="selectAvatar(this)">🎂</div>
+            <!-- symbols -->
+            <div class="avatar-opt av-symbols" data-av="💎" onclick="selectAvatar(this)">💎</div>
+            <div class="avatar-opt av-symbols" data-av="🔑" onclick="selectAvatar(this)">🔑</div>
+            <div class="avatar-opt av-symbols" data-av="🗝️" onclick="selectAvatar(this)">🗝️</div>
+            <div class="avatar-opt av-symbols" data-av="⚡" onclick="selectAvatar(this)">⚡</div>
+            <div class="avatar-opt av-symbols" data-av="🎪" onclick="selectAvatar(this)">🎪</div>
+            <div class="avatar-opt av-symbols" data-av="🎠" onclick="selectAvatar(this)">🎠</div>
+            <div class="avatar-opt av-symbols" data-av="🎡" onclick="selectAvatar(this)">🎡</div>
+            <div class="avatar-opt av-symbols" data-av="🎢" onclick="selectAvatar(this)">🎢</div>
+            <div class="avatar-opt av-symbols" data-av="🏕️" onclick="selectAvatar(this)">🏕️</div>
+            <div class="avatar-opt av-symbols" data-av="🗺️" onclick="selectAvatar(this)">🗺️</div>
+            <div class="avatar-opt av-symbols" data-av="🧭" onclick="selectAvatar(this)">🧭</div>
+            <div class="avatar-opt av-symbols" data-av="⚓" onclick="selectAvatar(this)">⚓</div>
+            <div class="avatar-opt av-symbols" data-av="🚀" onclick="selectAvatar(this)">🚀</div>
+            <div class="avatar-opt av-symbols" data-av="🛸" onclick="selectAvatar(this)">🛸</div>
+            <div class="avatar-opt av-symbols" data-av="🌌" onclick="selectAvatar(this)">🌌</div>
+            <div class="avatar-opt av-symbols" data-av="🔭" onclick="selectAvatar(this)">🔭</div>
+            <div class="avatar-opt av-symbols" data-av="💡" onclick="selectAvatar(this)">💡</div>
+            <div class="avatar-opt av-symbols" data-av="🕯️" onclick="selectAvatar(this)">🕯️</div>
+            <div class="avatar-opt av-symbols" data-av="🪬" onclick="selectAvatar(this)">🪬</div>
+            <div class="avatar-opt av-symbols" data-av="🧲" onclick="selectAvatar(this)">🧲</div>
+            <div class="avatar-opt av-symbols" data-av="⚗️" onclick="selectAvatar(this)">⚗️</div>
+            <div class="avatar-opt av-symbols" data-av="🔬" onclick="selectAvatar(this)">🔬</div>
+            <div class="avatar-opt av-symbols" data-av="🎴" onclick="selectAvatar(this)">🎴</div>
+            <div class="avatar-opt av-symbols" data-av="🀄" onclick="selectAvatar(this)">🀄</div>
+            <div class="avatar-opt av-symbols" data-av="🪩" onclick="selectAvatar(this)">🪩</div>
+          </div>
+        </div>
+        <div class="av-selected-preview">
+          已选：<span id="av-preview">🦊</span>
+        </div>
+      </div>
+      <div class="err-msg" id="reg-err">请填写完整信息</div>
+      <button class="btn btn-register" onclick="doRegister()">✦ 创建账户</button>
+    </div>
+  </div>
+
+  <div class="site-footer"><span class="footer-star">★</span> Created by <span class="creator-name">腊肉</span> <span class="footer-star">★</span></div>
+</div>
+
+<!-- ===== HOME SCREEN ===== -->
+<div class="screen" id="home-screen">
+  <div class="topbar">
+    <div class="topbar-title">⬡ 黄金侦探</div>
+    <div class="user-info">
+      <div class="topbar-btns">
+        <button class="topbar-btn-icon" onclick="showSavedGames()"><span class="tbtn-icon">📁</span><span class="tbtn-label">存档</span></button>
+        <button class="topbar-btn-icon" onclick="showProfile()"><span class="tbtn-icon">📖</span><span class="tbtn-label">记录</span></button>
+        <button class="topbar-btn-icon" onclick="doLogout()"><span class="tbtn-icon">🚪</span><span class="tbtn-label">退出</span></button>
+      </div>
+      <div class="user-avatar-wrap">
+        <div class="user-avatar" id="home-avatar">🦊</div>
+        <div class="user-name" id="home-username">冒险者</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="home-content">
+    <div class="welcome-msg">你好，<span id="welcome-name" style="color:#e8960a;font-weight:bold;">侦探</span>，欢迎来到寻找黄金宝物的挑战。<br>请选择主题地图，开启寻宝之旅吧！<br><span style="opacity:0.85;font-size:0.9em"><span class="welcome-star">★</span> 我为你在地图提前埋下了道具，预祝寻宝愉快。<span class="welcome-star">★</span></span></div>
+    <div class="section-title">◈ 选择主题开始冒险</div>
+    <div class="themes-grid">
+      <div class="theme-card" onclick="selectTheme('literature')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Book%203%20%28back%2C%20green%2C%20tallest%29%20--%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%226%22%20width%3D%227%22%20height%3D%2222%22%20fill%3D%22%234a9a4a%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%226%22%20width%3D%222%22%20height%3D%2222%22%20fill%3D%22%232a7a2a%22%2F%3E%0A%20%20%3Crect%20x%3D%2224%22%20y%3D%227%22%20width%3D%221%22%20height%3D%2220%22%20fill%3D%22%236aba6a%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%232a7a2a%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%232a7a2a%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%232a7a2a%22%2F%3E%0A%20%20%3C%21--%20Book%202%20%28middle%2C%20orange%29%20--%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%229%22%20width%3D%228%22%20height%3D%2219%22%20fill%3D%22%23e8960a%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%229%22%20width%3D%222%22%20height%3D%2219%22%20fill%3D%22%23b87000%22%2F%3E%0A%20%20%3Crect%20x%3D%2215%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%2217%22%20fill%3D%22%23ffc840%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2211%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23b87000%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2215%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23b87000%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2219%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23b87000%22%2F%3E%0A%20%20%3C%21--%20Book%201%20%28front%2C%20purple%2C%20shortest%29%20--%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%228%22%20height%3D%2216%22%20fill%3D%22%237c5cbf%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%2216%22%20fill%3D%22%234a3080%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2213%22%20width%3D%221%22%20height%3D%2214%22%20fill%3D%22%23a880e0%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%234a3080%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2218%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%234a3080%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2222%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%234a3080%22%2F%3E%0A%20%20%3C%21--%20Shared%20shelf%20bottom%20--%3E%0A%20%20%3Crect%20x%3D%223%22%20y%3D%2228%22%20width%3D%2227%22%20height%3D%222%22%20fill%3D%22%238b6a3a%22%2F%3E%0A%20%20%3C%21--%20Gold%20bookmark%20on%20back%20book%20--%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%224%22%20width%3D%222%22%20height%3D%228%22%20fill%3D%22%23e8960a%22%2F%3E%0A%20%20%3Cpolygon%20points%3D%2227%2C12%2029%2C12%2028%2C14%22%20fill%3D%22%23e8960a%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="literature"/>
+        <div class="theme-name">文学</div>
+      </div>
+      <div class="theme-card" onclick="selectTheme('mystery')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Outer%20ring%20thick%20dark%20blue%20%282px%20border%29%20--%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%223%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%223%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%227%22%20width%3D%224%22%20height%3D%2212%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%227%22%20width%3D%224%22%20height%3D%2212%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2218%22%20width%3D%2218%22%20height%3D%223%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2221%22%20width%3D%2214%22%20height%3D%223%22%20fill%3D%22%230d2a58%22%2F%3E%0A%20%20%3C%21--%20Inner%20glass%20--%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%225%22%20width%3D%2214%22%20height%3D%222%22%20fill%3D%22%23a8d0f0%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%2218%22%20height%3D%2212%22%20fill%3D%22%23c0e0ff%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2219%22%20width%3D%2214%22%20height%3D%222%22%20fill%3D%22%23a8d0f0%22%2F%3E%0A%20%20%3C%21--%20Bright%20center%20--%3E%0A%20%20%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%2212%22%20height%3D%2212%22%20fill%3D%22%23d8f0ff%22%2F%3E%0A%20%20%3C%21--%20Glint%20top-left%20--%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%226%22%20width%3D%225%22%20height%3D%222%22%20fill%3D%22white%22%20opacity%3D%220.95%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%223%22%20height%3D%223%22%20fill%3D%22white%22%20opacity%3D%220.65%22%2F%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%227%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22white%22%20opacity%3D%220.4%22%2F%3E%0A%20%20%3C%21--%20Shadow%20bottom-right%20--%3E%0A%20%20%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%225%22%20height%3D%224%22%20fill%3D%22%237ab0d8%22%20opacity%3D%220.55%22%2F%3E%0A%20%20%3C%21--%20Handle%20--%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2220%22%20width%3D%223%22%20height%3D%223%22%20fill%3D%22%231a3a6a%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2222%22%20width%3D%223%22%20height%3D%223%22%20fill%3D%22%231a3a6a%22%2F%3E%0A%20%20%3Crect%20x%3D%2224%22%20y%3D%2224%22%20width%3D%223%22%20height%3D%223%22%20fill%3D%22%231a3060%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%2226%22%20width%3D%223%22%20height%3D%223%22%20fill%3D%22%230a2040%22%2F%3E%0A%20%20%3C%21--%20Blood%20drop%20%2B%20splash%20--%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%2227%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23c02020%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23d03030%22%2F%3E%0A%20%20%3Crect%20x%3D%2214%22%20y%3D%2224%22%20width%3D%221%22%20height%3D%222%22%20fill%3D%22%23e04040%22%2F%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%2228%22%20width%3D%221%22%20height%3D%222%22%20fill%3D%22%23c02020%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2227%22%20width%3D%221%22%20height%3D%222%22%20fill%3D%22%23c02020%22%2F%3E%0A%20%20%3Crect%20x%3D%2211%22%20y%3D%2226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23e04040%22%2F%3E%0A%20%20%3Crect%20x%3D%2216%22%20y%3D%2226%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23e04040%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="mystery"/>
+        <div class="theme-name">推理小说</div>
+      </div>
+      <div class="theme-card" onclick="selectTheme('lightnovel')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2036%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Left%20wing%20--%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%229%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2211%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2212%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2213%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2214%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2215%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2216%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2217%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2218%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2219%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2220%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%223%22%20height%3D%228%22%20fill%3D%22%23f8c0e0%22%20opacity%3D%220.4%22%2F%3E%0A%20%20%3C%21--%20Right%20wing%20--%3E%0A%20%20%3Crect%20x%3D%2230%22%20y%3D%227%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%2229%22%20y%3D%228%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2228%22%20y%3D%229%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2224%22%20y%3D%2211%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2212%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2213%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2214%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2215%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2224%22%20y%3D%2216%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2226%22%20y%3D%2217%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2228%22%20y%3D%2218%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2229%22%20y%3D%2219%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%2230%22%20y%3D%2220%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%229%22%20width%3D%223%22%20height%3D%228%22%20fill%3D%22%23f8c0e0%22%20opacity%3D%220.4%22%2F%3E%0A%20%20%3C%21--%20Center%20knot%20--%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%2211%22%20width%3D%228%22%20height%3D%226%22%20fill%3D%22%23c03878%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2212%22%20width%3D%226%22%20height%3D%224%22%20fill%3D%22%23e050a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2214%22%20y%3D%2213%22%20width%3D%224%22%20height%3D%222%22%20fill%3D%22%23f080c0%22%20opacity%3D%220.5%22%2F%3E%0A%20%20%3C%21--%20Left%20tail%20%E2%80%94%20longer%2C%20gentle%20wave%20--%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2217%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%2219%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2211%22%20y%3D%2221%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%2223%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%229%22%20y%3D%2227%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%229%22%20y%3D%2229%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2231%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2233%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23f8b0d8%22%2F%3E%0A%20%20%3C%21--%20Right%20tail%20%E2%80%94%20longer%2C%20gentle%20wave%20other%20direction%20--%3E%0A%20%20%3Crect%20x%3D%2216%22%20y%3D%2217%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2219%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2218%22%20y%3D%2221%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2219%22%20y%3D%2223%22%20width%3D%223%22%20height%3D%222%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23d84898%22%2F%3E%0A%20%20%3Crect%20x%3D%2221%22%20y%3D%2227%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23e060a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2221%22%20y%3D%2229%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23e878b0%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2231%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23f090c0%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2233%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23f8b0d8%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="lightnovel"/>
+        <div class="theme-name">轻小说</div>
+      </div>
+      <div class="theme-card" onclick="selectTheme('movie')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Board%20body%20light%20grey%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2213%22%20width%3D%2228%22%20height%3D%2217%22%20fill%3D%22%238a8a9a%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2213%22%20width%3D%2228%22%20height%3D%222%22%20fill%3D%22%237a7a8a%22%2F%3E%0A%20%20%3C%21--%20Film%20holes%20left%20--%3E%0A%20%20%3Crect%20x%3D%223%22%20y%3D%2215%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3Crect%20x%3D%223%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3Crect%20x%3D%223%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3C%21--%20Film%20holes%20right%20--%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%2215%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%223%22%20fill%3D%22%23e8e8f0%22%2F%3E%0A%20%20%3C%21--%20Screen%20area%20medium%20grey%20--%3E%0A%20%20%3Crect%20x%3D%227%22%20y%3D%2215%22%20width%3D%2218%22%20height%3D%2213%22%20fill%3D%22%235a5a6a%22%2F%3E%0A%20%20%3C%21--%20Play%20triangle%20orange%20--%3E%0A%20%20%3Cpolygon%20points%3D%2212%2C18%2012%2C25%2022%2C21%22%20fill%3D%22%23e8960a%22%2F%3E%0A%20%20%3Cpolygon%20points%3D%2212%2C18%2012%2C21%2015%2C19%22%20fill%3D%22%23ffc840%22%20opacity%3D%220.5%22%2F%3E%0A%20%20%3C%21--%20Top%20orange%20panel%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%226%22%20width%3D%2228%22%20height%3D%228%22%20fill%3D%22%23e8960a%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%226%22%20width%3D%2228%22%20height%3D%221%22%20fill%3D%22%23ffc840%22%2F%3E%0A%20%20%3C%21--%20Light%20grey%20stripes%20--%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%224%22%20height%3D%226%22%20fill%3D%22%238a8a9a%22%2F%3E%0A%20%20%3Crect%20x%3D%2210%22%20y%3D%227%22%20width%3D%224%22%20height%3D%226%22%20fill%3D%22%238a8a9a%22%2F%3E%0A%20%20%3Crect%20x%3D%2216%22%20y%3D%227%22%20width%3D%224%22%20height%3D%226%22%20fill%3D%22%238a8a9a%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%227%22%20width%3D%224%22%20height%3D%226%22%20fill%3D%22%238a8a9a%22%2F%3E%0A%20%20%3C%21--%20Hinge%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2213%22%20width%3D%2228%22%20height%3D%221%22%20fill%3D%22%23a0a0b0%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="movie"/>
+        <div class="theme-name">电影</div>
+      </div>
+      <div class="theme-card" onclick="selectTheme('manga')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Left%20page%20%28curved%20-%20lighter%20at%20spine%29%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2212%22%20height%3D%2224%22%20fill%3D%22%23f8f8f8%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%221%22%20height%3D%2224%22%20fill%3D%22%23d0d0d0%22%2F%3E%0A%20%20%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%222%22%20height%3D%2224%22%20fill%3D%22%23f0f0f0%22%2F%3E%0A%20%20%3C%21--%20Left%20page%20panel%20lines%20--%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%229%22%20height%3D%226%22%20fill%3D%22white%22%20stroke-width%3D%220%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%227%22%20width%3D%221%22%20height%3D%226%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%227%22%20width%3D%221%22%20height%3D%226%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3C%21--%20Chibi%20face%20in%20left%20panel%20--%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%228%22%20width%3D%225%22%20height%3D%224%22%20fill%3D%22%23ffe8d0%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%228%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%227%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%229%22%20y%3D%229%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%228%22%20y%3D%2210%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%23c86070%22%2F%3E%0A%20%20%3C%21--%20Left%20page%20text%20lines%20--%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2214%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2216%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2218%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3Crect%20x%3D%224%22%20y%3D%2220%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3C%21--%20Spine%20curve%20shadow%20--%3E%0A%20%20%3Crect%20x%3D%2214%22%20y%3D%224%22%20width%3D%222%22%20height%3D%2226%22%20fill%3D%22%23c0a080%22%2F%3E%0A%20%20%3Crect%20x%3D%2214%22%20y%3D%224%22%20width%3D%221%22%20height%3D%2226%22%20fill%3D%22%23a08060%22%2F%3E%0A%20%20%3C%21--%20Right%20page%20--%3E%0A%20%20%3Crect%20x%3D%2216%22%20y%3D%225%22%20width%3D%2212%22%20height%3D%2224%22%20fill%3D%22%23f8f8f8%22%2F%3E%0A%20%20%3Crect%20x%3D%2227%22%20y%3D%225%22%20width%3D%221%22%20height%3D%2224%22%20fill%3D%22%23d0d0d0%22%2F%3E%0A%20%20%3C%21--%20Right%20page%20action%20panel%20--%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%227%22%20width%3D%229%22%20height%3D%228%22%20fill%3D%22white%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%227%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%227%22%20width%3D%221%22%20height%3D%228%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%2225%22%20y%3D%227%22%20width%3D%221%22%20height%3D%228%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2214%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%23333%22%2F%3E%0A%20%20%3C%21--%20Speed%20lines%20in%20panel%20--%3E%0A%20%20%3Crect%20x%3D%2221%22%20y%3D%228%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%2222%22%20y%3D%2212%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3C%21--%20Right%20text%20lines%20--%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2216%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2218%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3Crect%20x%3D%2217%22%20y%3D%2220%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23888%22%2F%3E%0A%20%20%3C%21--%20Pencil%20on%20right%20side%20--%3E%0A%20%20%3Crect%20x%3D%2228%22%20y%3D%224%22%20width%3D%222%22%20height%3D%2218%22%20fill%3D%22%23f0c030%22%2F%3E%0A%20%20%3Crect%20x%3D%2228%22%20y%3D%224%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%23e0a820%22%2F%3E%0A%20%20%3Cpolygon%20points%3D%2228%2C22%2030%2C22%2029%2C26%22%20fill%3D%22%23ffe0a0%22%2F%3E%0A%20%20%3Cpolygon%20points%3D%2228.5%2C24%2029.5%2C24%2029%2C26%22%20fill%3D%22%23c08040%22%2F%3E%0A%20%20%3Crect%20x%3D%2228%22%20y%3D%223%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23e03030%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="manga"/>
+        <div class="theme-name">漫画</div>
+      </div>
+            <div class="theme-card" onclick="selectTheme('general')">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20shape-rendering%3D%22crispEdges%22%3E%0A%20%20%3C%21--%20Folder%20back%20--%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2210%22%20width%3D%2230%22%20height%3D%2220%22%20fill%3D%22%23c8a840%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2210%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%23b89020%22%2F%3E%0A%20%20%3C%21--%20Folder%20tab%20--%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%227%22%20width%3D%2212%22%20height%3D%224%22%20fill%3D%22%23c8a840%22%2F%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%227%22%20width%3D%2212%22%20height%3D%221%22%20fill%3D%22%23b89020%22%2F%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%227%22%20width%3D%222%22%20height%3D%224%22%20fill%3D%22%23e0b840%22%20opacity%3D%220.5%22%2F%3E%0A%20%20%3C%21--%20Folder%20body%20lighter%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2211%22%20width%3D%2228%22%20height%3D%2218%22%20fill%3D%22%23f0d060%22%2F%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2211%22%20width%3D%2228%22%20height%3D%221%22%20fill%3D%22%23e0c040%22%2F%3E%0A%20%20%3C%21--%20Documents%20inside%20--%3E%0A%20%20%3C%21--%20Doc%201%20%28white%2C%20slightly%20tilted%20left%29%20--%3E%0A%20%20%3Crect%20x%3D%225%22%20y%3D%2213%22%20width%3D%228%22%20height%3D%2211%22%20fill%3D%22white%22%2F%3E%0A%20%20%3Crect%20x%3D%225%22%20y%3D%2213%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23d0d0d0%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2215%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2219%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%226%22%20y%3D%2221%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3C%21--%20Doc%202%20%28white%2C%20straight%29%20--%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%228%22%20height%3D%2212%22%20fill%3D%22%23f8f8f8%22%2F%3E%0A%20%20%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23d0d0d0%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2214%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2216%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2218%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3Crect%20x%3D%2213%22%20y%3D%2220%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23aaa%22%2F%3E%0A%20%20%3C%21--%20Doc%203%20%28light%20yellow%2C%20tilted%20right%29%20--%3E%0A%20%20%3Crect%20x%3D%2219%22%20y%3D%2213%22%20width%3D%228%22%20height%3D%2211%22%20fill%3D%22%23fffce0%22%2F%3E%0A%20%20%3Crect%20x%3D%2219%22%20y%3D%2213%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%23d8d0a0%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2215%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%23b8a840%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%23b8a840%22%2F%3E%0A%20%20%3Crect%20x%3D%2220%22%20y%3D%2219%22%20width%3D%223%22%20height%3D%221%22%20fill%3D%22%23b8a840%22%2F%3E%0A%20%20%3C%21--%20Folder%20shadow%20bottom%20--%3E%0A%20%20%3Crect%20x%3D%221%22%20y%3D%2229%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%23a08020%22%2F%3E%0A%20%20%3C%21--%20Folder%20highlight%20--%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%2211%22%20width%3D%2228%22%20height%3D%221%22%20fill%3D%22%23f8e080%22%20opacity%3D%220.4%22%2F%3E%0A%3C%2Fsvg%3E" style="width:54px;height:54px;" alt="general"/>
+        <div class="theme-name">综合</div>
+      </div>
+    </div>
+
+    <div class="section-title">◈ 游戏说明</div>
+
+    <div class="info-section">
+      <div class="info-section-title">🏆 胜利条件</div>
+      <div class="info-diff-grid">
+        <div class="info-diff-card diff1">
+          <div class="diff-header"><span class="diff-badge">难度一</span><span class="diff-size">6×6 格子</span></div>
+          <div class="diff-goal">找到 <strong>宝物×3 🌟</strong> 获胜</div>
+          <div class="diff-chips">
+            <span class="diff-chip">🪏 铲子×3</span>
+            <span class="diff-chip">🧨 鞭炮×2</span>
+            <span class="diff-chip">💣 炸弹×2</span>
+            <span class="diff-chip">😇 天使×2</span>
+          </div>
+        </div>
+        <div class="info-diff-card diff2">
+          <div class="diff-header"><span class="diff-badge">难度二</span><span class="diff-size">9×9 格子</span></div>
+          <div class="diff-goal">找到 <strong>宝物×6 🌟</strong> 获胜</div>
+          <div class="diff-chips">
+            <span class="diff-chip">🪏 铲子×6</span>
+            <span class="diff-chip">🧨 鞭炮×4</span>
+            <span class="diff-chip">💣 炸弹×4</span>
+            <span class="diff-chip">😇 天使×4</span>
+          </div>
+        </div>
+        <div class="info-diff-card diff3">
+          <div class="diff-header"><span class="diff-badge">难度三</span><span class="diff-size">12×12 格子</span></div>
+          <div class="diff-goal">找到 <strong>宝物×10 🌟</strong> 获胜</div>
+          <div class="diff-chips">
+            <span class="diff-chip">🪏 铲子×10</span>
+            <span class="diff-chip">🧨 鞭炮×7</span>
+            <span class="diff-chip">💣 炸弹×7</span>
+            <span class="diff-chip">😇 天使×7</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-section-title">🎯 道具说明</div>
+      <div class="skill-list">
+        <div class="skill-row">
+          <span class="skill-row-icon">🪏</span>
+          <div class="skill-row-body">
+            <div class="skill-row-name">铲子格（提示格）</div>
+            <div class="skill-row-desc">以此格子为中心的一圈格子里，必有一个宝物</div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-row-icon">🧨</span>
+          <div class="skill-row-body">
+            <div class="skill-row-name">鞭炮格</div>
+            <div class="skill-row-desc">踩出此格，可以此格为轴心，任选行／列／斜轴，消除整条线上所有格子</div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-row-icon">💣</span>
+          <div class="skill-row-body">
+            <div class="skill-row-name">炸弹格</div>
+            <div class="skill-row-desc">踩出此格，以此格为中心，消除周围相邻一圈的所有格子</div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-row-icon">😇</span>
+          <div class="skill-row-body">
+            <div class="skill-row-name">幸运天使</div>
+            <div class="skill-row-desc">踩出此格，随机获得任意一个宝物所在行／列的提示</div>
+          </div>
+        </div>
+        <div class="skill-row">
+          <span class="skill-row-icon">📝</span>
+          <div class="skill-row-body">
+            <div class="skill-row-name">挑战格</div>
+            <div class="skill-row-desc">完成阅读／观影挑战，提交读后感（至少20字）才可通过</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="site-footer"><span class="footer-star">★</span> Created by <span class="creator-name">腊肉</span> <span class="footer-star">★</span></div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div class="screen" id="game-screen">
+  <div class="game-header">
+    <button class="topbar-btn" onclick="goHome()" style="flex-shrink:0">← 返回</button>
+    <div class="game-title" id="game-title">文学冒险</div>
+    <div class="stat-chip">🌟 宝物 <span class="val" id="treasure-count">0</span>/<span id="treasure-goal">6</span></div>
+    <div class="stat-chip timer-chip">⏱ <span class="val" id="game-timer">00:00</span></div>
+    <div class="stat-chip">📝 挑战 <span class="val" id="challenge-stepped">0</span>/<span id="challenge-total">0</span></div>
+    <button id="save-btn" onclick="saveGame(true)">💾 存档</button>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomMap(-0.1)">−</button>
+      <div class="zoom-val" id="zoom-val">100%</div>
+      <button class="zoom-btn" onclick="zoomMap(0.1)">+</button>
+    </div>
+  </div>
+  
+  <div class="game-body">
+    <div class="map-container" id="mapContainer">
+      <div class="map-wrapper" id="mapWrapper">
+        <table class="map-table" id="mapTable"></table>
+      </div>
+    </div>
+
+    <!-- In-game legend -->
+    <div class="game-legend">
+      <div class="game-legend-toggle" onclick="this.parentElement.classList.toggle('open'); updateLegendCounts();">
+        <span>📖 道具与格子说明</span><span class="legend-arrow">▼</span>
+      </div>
+      <div class="game-legend-body">
+        <div class="game-legend-row"><span class="gli">🌟</span><div class="gln-wrap"><span class="gln">宝物格</span><span class="leg-remain" id="leg-treasure"></span></div><span class="gld">找到全部即获胜，触发元宝雨！</span></div>
+        <div class="game-legend-row"><span class="gli">🪏</span><div class="gln-wrap"><span class="gln">铲子格</span><span class="leg-remain" id="leg-hint"></span></div><span class="gld">以此格子为中心的一圈格子里，必有一个宝物</span></div>
+        <div class="game-legend-row"><span class="gli">🧨</span><div class="gln-wrap"><span class="gln">鞭炮格</span><span class="leg-remain" id="leg-firecracker"></span></div><span class="gld">选择行／列／斜轴，消除整条线</span></div>
+        <div class="game-legend-row"><span class="gli">💣</span><div class="gln-wrap"><span class="gln">炸弹格</span><span class="leg-remain" id="leg-bomb"></span></div><span class="gld">消除周围相邻一圈（最多8格）</span></div>
+        <div class="game-legend-row"><span class="gli">😇</span><div class="gln-wrap"><span class="gln">幸运天使</span><span class="leg-remain" id="leg-angel"></span></div><span class="gld">随机提示宝物所在行／列</span></div>
+        <div class="game-legend-row"><span class="gli">📝</span><div class="gln-wrap"><span class="gln">挑战格</span><span class="leg-remain" id="leg-challenge"></span></div><span class="gld">完成阅读／观影挑战并提交读后感</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="site-footer"><span class="footer-star">★</span> Created by <span class="creator-name">腊肉</span> <span class="footer-star">★</span></div>
+</div>
+
+<!-- ===== PROFILE SCREEN ===== -->
+<div class="screen" id="profile-screen">
+  <div class="topbar">
+    <button class="topbar-btn" onclick="goHome()">← 返回</button>
+    <div class="topbar-title">📖 阅读记录</div>
+    <div></div>
+  </div>
+  <div class="profile-content">
+    <div class="profile-card" id="profile-card"></div>
+
+    <div class="section-title" style="margin-bottom:12px">◈ 我的最佳成绩</div>
+    <div class="lb-tabs" id="lb-tabs">
+      <button class="lb-tab active" onclick="switchLbTab(this,'all')">📊 总榜</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'literature')">📚 文学</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'mystery')">🔍 推理</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'lightnovel')">✒️ 轻小说</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'movie')">🎬 电影</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'manga')">📖 漫画</button>
+      <button class="lb-tab" onclick="switchLbTab(this,'general')">📂 综合</button>
+    </div>
+    <div id="lb-content" style="margin-bottom:28px"></div>
+
+    <div class="section-title" style="margin-bottom:12px">◈ 挑战历史</div>
+    <div class="lb-tabs" id="hist-tabs">
+      <button class="lb-tab active" onclick="switchHistTab(this,'all')">全部</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'literature')">📚 文学</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'mystery')">🔍 推理</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'lightnovel')">✒️ 轻小说</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'movie')">🎬 电影</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'manga')">📖 漫画</button>
+      <button class="lb-tab" onclick="switchHistTab(this,'general')">📂 综合</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+
+<script>
+// ===================================
+// DATA LAYER
+// ===================================
+const SHOVEL_IMG = '<span style="font-size:clamp(16px,2.5vw,22px);line-height:1;">🪏</span>';
+const SHOVEL_SMALL = '<span style="font-size:18px;vertical-align:middle;">🪏</span>';
+const YUANBAO_SMALL = '<span style="font-size:16px;">🌟</span>';
+const YUANBAO_IMG = '<span class="yuanbao-icon">🌟</span>';
+const DB = {
+  get(key) { try { return JSON.parse(localStorage.getItem('xunbao_'+key)) } catch{return null} },
+  set(key,val) { localStorage.setItem('xunbao_'+key, JSON.stringify(val)) },
+  users() { return this.get('users') || {} },
+  saves() { return this.get('saves') || {} },
+  history() { return this.get('history') || [] },
+  saveUsers(u) { this.set('users',u) },
+  saveSaves(s) { this.set('saves',s) },
+  saveHistory(h) { this.set('history',h) }
+};
+
+const THEME_NAMES = {
+  literature:'文学', mystery:'推理小说', lightnovel:'轻小说',
+  movie:'电影', manga:'漫画', general:'综合'
+};
+const THEME_ICONS = {
+  literature:'📚', mystery:'🔍', lightnovel:'🎀', movie:'🎬', manga:'📖', general:'📂'
+};
+
+// Challenge tasks per theme
+const CHALLENGES = {
+      literature: [
+      '阅读一本澳大利亚的书',
+      '阅读一本加拿大的书',
+      '阅读一本英国的书',
+      '阅读一本爱尔兰的书',
+      '阅读一本法国的书',
+      '阅读一本德国的书',
+      '阅读一本意大利的书',
+      '阅读一本西班牙的书',
+      '阅读一本北欧的书',
+      '阅读一本东欧的书',
+      '阅读一本俄罗斯的书',
+      '阅读一本韩国的书',
+      '阅读一本印度的书',
+      '阅读一本中东的书',
+      '阅读一本非洲的书',
+      '阅读一本南美洲的书',
+      '阅读一本拉丁美洲的书',
+      '阅读一本东南亚的书',
+      '阅读一本大洋洲的书',
+      '阅读一本日本的书',
+      '阅读一本两岸三地的书',
+      '阅读一本秘鲁的书',
+      '阅读一本阿根廷文学',
+      '阅读一本荷兰的书',
+      '阅读一本捷克的书',
+      '阅读一本雨果奖作品',
+      '阅读一本星云奖作品',
+      '阅读一本直木奖作品',
+      '阅读一本芥川奖作品',
+      '阅读一本诺贝尔文学奖作品',
+      '阅读一本龚古尔奖作品',
+      '阅读一本国际布克奖作品',
+      '阅读一本普利策奖（任何类别）作品',
+      '阅读一本科幻小说',
+      '阅读一本戏剧剧本',
+      '阅读一本悬疑推理',
+      '阅读一本恐怖小说',
+      '阅读一本哥特小说',
+      '阅读一本爱情小说',
+      '阅读一本历史小说',
+      '阅读一本散文集',
+      '阅读一本短篇小说集',
+      '阅读一本诗歌集',
+      '阅读一本非虚构作品',
+      '阅读一本幻想小说',
+      '阅读一本与海有关的书',
+      '阅读一本与沙漠有关的书',
+      '阅读一本与战争有关的书',
+      '阅读一本与季节有关的书',
+      '阅读一本与火有关的书',
+      '阅读一本与山有关的书',
+      '阅读一本与水有关的书',
+      '阅读一本女作家作品',
+      '阅读一本与雪有关的书',
+      '阅读一本与雨有关的书',
+      '阅读一本与亚文化有关的书',
+      '阅读一本与艺术有关的书',
+      '阅读一本与音乐有关的书',
+      '阅读一本与心理学有关的书',
+      '阅读一本标题有数字的书',
+      '阅读一本标题有字母的书',
+      '阅读一本标题拼音有d的书',
+      '阅读一本标题拼音有m的书',
+      '阅读一本标题有动词的书',
+      '阅读一本标题是2个字的书',
+      '阅读一本标题是3个字的书',
+      '阅读一本标题是4个字的书',
+      '阅读一本标题是5个字的书',
+      '阅读一本标题是6个字的书',
+      '阅读一本标题不少于10个字的书',
+      '阅读一本标题有「罪」这个字的书',
+      '阅读一本标题有「人」这个字的书',
+      '阅读一本标题有「你」这个字的书',
+      '阅读一本标题有「天」这个字的书',
+      '阅读一本标题有「心」这个字的书',
+      '阅读一本标题有乐器的书',
+      '阅读一本以人名作为书名的书',
+      '阅读一本书名中含有颜色词汇的书',
+      '阅读一本书名中含有动物名称的书',
+      '阅读一本书名中含有地名或方位的书',
+      '阅读一本封面好看的书',
+      '阅读一本封面有妖怪的书',
+      '阅读一本封面有花的书',
+      '阅读一本封面有鸟的书',
+      '阅读一本封面有小猫的书',
+      '阅读一本封面里有动物的书',
+      '阅读一本封面有人的书',
+      '阅读一本封面有植物的书',
+      '阅读一本封面是黄色的书',
+      '阅读一本封面是紫色的书',
+      '阅读一本封面是橙色的书',
+      '阅读一本封面是红色的书',
+      '阅读一本封面是绿色的书',
+      '阅读一本封面是蓝色的书',
+      '阅读一本封面是黑色的书',
+      '阅读一本封面是白色的书',
+      '阅读一本作者名字里有动物的书',
+      '阅读一本作者名字是四个字的书',
+      '阅读一本作者是90后的书',
+      '阅读一本你从未读过的作者的书',
+      '阅读一本近三年出版的书',
+      '阅读一本豆瓣评分不低于8分的书',
+      '阅读一本豆瓣评价不高于6分的书',
+      '阅读一本不少于20万字的书',
+      '阅读一本不少于30万字的书',
+      '阅读一本不超过10万字的书',
+      '阅读一本名著',
+      '阅读一本被改编成影视剧的书',
+      '阅读一本与节日有关的书',
+      '随意阅读一本你喜欢的书（每张地图可出现3次）',
+    ],
+  mystery: [
+    '读一本连环杀人主题的推理小说',
+    '读一本密室主题的推理小说',
+    '读一本毒杀主题的推理小说',
+    '读一本医疗推理小说',
+    '读一本妖怪题材的推理小说',
+    '读一本暴风雪山庄主题的推理小说',
+    '读一本设定系推理小说',
+    '读一本法庭推理小说',
+    '读一本校园主题推理小说',
+    '读一本日常推理小说',
+    '读一本建筑诡计推理小说',
+    '读一本童话主题推理小说',
+    '读一本童谣主题推理小说',
+    '读一本密室短篇集',
+    '读一本沙滩密室推理小说',
+    '读一本物理诡计推理小说',
+    '读一本双胞胎诡计推理小说',
+    '读一本叙事诡计推理小说',
+    '读一本时刻表诡计推理小说',
+    '读一本历史主题推理小说',
+    '读一本社会派推理小说',
+    '读一本新本格推理小说',
+    '读一本本格推理小说',
+    '读一本恶女主题推理小说',
+    '读一本短篇推理集',
+    '读一本多作家合集',
+    '读一本推理类恐怖小说',
+    '读一本推理类悬疑小说',
+    '读一本近三年出版的推理小说',
+    '读一本女作家推理小说',
+    '读一本异世界主题推理小说',
+    '读一本末世主题推理小说',
+    '读一本青春主题推理小说',
+    '读一本横沟正史奖作品',
+    '读一本鲇川哲也奖作品',
+    '读一本梅菲斯特奖作品',
+    '读一本推理作家协会奖作品',
+    '读一本本格推理大奖作品',
+    '读一本获得直木奖的推理小说',
+    '读一本获得江户川乱步奖的推理小说',
+    '读一本获奖的推理小说',
+    '读一本60后作者写的推理小说',
+    '读一本70后作者写的推理小说',
+    '读一本80后作者写的推理小说',
+    '读一本90后作者写的推理小说',
+    '读一本标题或作者含「杀」字的推理小说',
+    '读一本标题或作者含「人」字的推理小说',
+    '读一本标题或作者含「事」字的推理小说',
+    '读一本标题或作者含「件」字的推理小说',
+    '读一本标题或作者含「馆」字的推理小说',
+    '读一本标题或作者含「春」字的推理小说',
+    '读一本标题或作者含「夏」字的推理小说',
+    '读一本标题或作者含「秋」字的推理小说',
+    '读一本标题或作者含「冬」字的推理小说',
+    '读一本标题或作者含「红」字的推理小说',
+    '读一本标题或作者含「黑」字的推理小说',
+    '读一本标题或作者含「爱」字的推理小说',
+    '读一本标题或作者含「之」字的推理小说',
+    '读一本标题或作者含「与」字的推理小说',
+    '读一本标题或作者含「白」字的推理小说',
+    '读一本标题或作者含「夜」字的推理小说',
+    '读一本标题或作者含「风」字的推理小说',
+    '读一本标题或作者含「一」字的推理小说',
+    '读一本标题或作者含「水」字的推理小说',
+    '读一本标题或作者含「囚」字的推理小说',
+    '读一本标题或作者含「花」字的推理小说',
+    '读一本标题或作者含「雪」字的推理小说',
+    '读一本标题或作者含「月」字的推理小说',
+    '读一本标题含数字的推理小说',
+    '读一本作者名字里含数字的推理小说',
+    '读一本标题或作者名字里有动词的推理小说',
+    '读一本标题或作者名字里有颜色词的推理小说',
+    '读一本标题或作者名字里有食物的推理小说',
+    '读一本作者名字是五个字的推理小说',
+    '读一本封面有妖怪或鬼的推理小说',
+    '读一本封面是绿色的推理小说',
+    '读一本封面是红色的推理小说',
+    '读一本封面是黄色的推理小说',
+    '读一本封面是蓝色的推理小说',
+    '读一本封面是橙色的推理小说',
+    '读一本封面是黑色的推理小说',
+    '读一本封面是白色的推理小说',
+    '读一本书名或作者里有木字旁汉字的推理小说',
+    '读一本书名或作者里有草字头汉字的推理小说',
+    '读一本书名或作者里有提手旁汉字的推理小说',
+    '读一本书名或作者里有三点水旁汉字的推理小说',
+    '读一本书名或作者里有金字旁汉字的推理小说',
+    '读一本作者名字里有动物的推理小说',
+    '读一本标题或作者名字里有植物的推理小说',
+  ],
+  lightnovel: [
+    '读一本日常系轻小说',
+    '读一本幻想系轻小说',
+    '读一本黑深残主题轻小说',
+    '读一本校园恋爱主题轻小说',
+    '读一本有魔法元素的轻小说',
+    '读一本涉及虚拟现实的轻小说',
+    '读一本有外星文明的轻小说',
+    '读一本以解密为核心的轻小说',
+    '读一本群像类型轻小说',
+    '读一本世界系轻小说',
+    '读一本末日轻小说',
+    '读一本异世界轻小说',
+    '读一本青春主题轻小说',
+    '读一本智斗类型轻小说',
+    '读一本戏剧题材轻小说',
+    '读一本喜剧类型轻小说',
+    '读一本恶搞类型轻小说',
+    '读一本音乐题材轻小说',
+    '读一本企业发展类型轻小说',
+    '读一本种田文轻小说',
+    '读一本转生异世界轻小说',
+    '读一本异世界开疆拓土轻小说',
+    '读一本校园文轻小说',
+    '读一本龙傲天文轻小说',
+    '读一本SF类型轻小说',
+    '读一本胃疼文轻小说',
+    '读一本催泪文轻小说',
+    '读一本青春治愈文轻小说',
+    '读一本有杀人情节的轻小说',
+    '读一本有恐怖元素的轻小说',
+    '读一本穿书轻小说',
+    '读一本主角是动物的轻小说',
+    '读一本主角不是人类的轻小说',
+    '读一本主角不是人也不是动物的轻小说',
+    '读一本恶役千金主题轻小说',
+    '读一本入榜「这本轻小说真厉害！」的作品',
+    '读一本电击文库大赏作品',
+    '读一本角川文库大赏作品',
+    '读一本富士见文库大赏作品',
+    '读一本小学馆/GAGAGA文库大赏作品',
+    '读一本标题字数不低于10字的轻小说',
+    '读一本作者名字没有汉字的轻小说',
+    '读一本作者名字含方位词的轻小说',
+    '读一本标题里有动词的轻小说',
+    '读一本封面人物不少于3个人的轻小说',
+    '读一本封面是绿色的轻小说',
+    '读一本封面人物头发是红色的轻小说',
+    '读一本封面人物头发是黄色的轻小说',
+    '读一本封面人物头发是蓝色的轻小说',
+    '读一本封面人物头发是紫色的轻小说',
+    '读一本封面人物头发是绿色的轻小说',
+    '读一本封面人物头发是橙棕色的轻小说',
+    '读一本封面人物头发是黑色的轻小说',
+    '读一本封面人物头发是白色的轻小说',
+    '读一本作者名字是五个字的轻小说',
+    '读一本书名或作者里有「水」字的轻小说',
+    '读一本书名或作者里有「人」字的轻小说',
+    '读一本书名或作者里有「校」字的轻小说',
+    '读一本书名或作者里有「花」字的轻小说',
+    '读一本书名或作者里有「雪」字的轻小说',
+    '读一本书名或作者里有「月」字的轻小说',
+    '读一本书名或作者里有「天」字的轻小说',
+    '读一本书名或作者里有「你」字的轻小说',
+    '读一本书名或作者里有「光」字的轻小说',
+    '读一本书名或作者里有「我」字的轻小说',
+    '读一本书名或作者里有「恋」字的轻小说',
+    '读一本书名或作者里有「女」字的轻小说',
+    '读一本书名或作者里有木字旁汉字的轻小说',
+    '读一本书名或作者里有草字头汉字的轻小说',
+    '读一本书名或作者里有提手旁汉字的轻小说',
+    '读一本书名或作者里有三点水旁汉字的轻小说',
+    '读一本书名或作者里有金字旁汉字的轻小说',
+  ],
+  movie: [
+    '观看一部法国电影',
+    '观看一部日本电影',
+    '观看一部北欧电影',
+    '观看一部第三世界电影',
+    '观看一部意大利电影',
+    '观看一部苏联或俄罗斯电影',
+    '观看一部经典怀旧电影',
+    '观看一部新马电影',
+    '观看一部旧好莱坞电影',
+    '观看一部国产电影',
+    '观看一部英国电影',
+    '观看一部德国电影',
+    '观看一部西部片或运动题材电影',
+    '观看一部音乐或歌舞类电影',
+    '观看一部同性题材电影',
+    '观看一部情色电影',
+    '观看一部传记电影',
+    '观看一部动画电影',
+    '观看一部奇幻或冒险电影',
+    '观看一部犯罪或悬疑电影',
+    '观看一部动作或武侠电影',
+    '观看一部科幻电影',
+    '观看一部历史题材电影',
+    '观看一部喜剧或爱情电影',
+    '观看一部任意获奖电影',
+    '观看一部IMDB Top榜单电影',
+    '观看一部文艺片',
+    '观看一部剧情片',
+    '观看一部血腥cult片',
+    '观看一部超自然恐怖片',
+    '观看一部入围柏林电影节的电影',
+    '观看一部入围戛纳电影节的电影',
+    '观看一部入围奥斯卡的电影',
+    '观看一部豆瓣Top 250电影',
+    '观看一部新浪潮电影',
+    '观看一部现实主义电影',
+    '观看一部港片',
+    '观看一部铅黄电影',
+    '观看一部黑色电影',
+    '观看一部意大利新现实主义电影',
+    '观看一部法国新浪潮电影',
+    '观看一部新好莱坞电影',
+    '观看一部中国第五代导演作品',
+    '观看一部台湾新电影',
+    '观看一部香港新浪潮电影',
+    '观看一部日本新浪潮电影',
+    '观看一部日本武士片',
+    '观看一部左岸电影',
+    '观看一部英国自由电影',
+    '观看一部新德国电影',
+    '观看一部女导演执导的电影',
+    '观看一部德国表现主义电影',
+    '观看一部法国超现实主义电影',
+    '观看一部视觉系电影',
+    '观看一部纪录片',
+    '观看一部入围威尼斯电影节的电影',
+    '观看一部第三电影',
+    '随意观看一部你喜欢的电影',
+    '观看一部电影名中有地名的电影',
+    '观看一部电影名中有天气现象的电影',
+    '观看一部电影名中有时间词的电影',
+    '观看一部电影名中有身体部位的电影',
+    '观看一部电影名中有武器的电影',
+    '观看一部电影名中有乐器的电影',
+    '观看一部电影名中有节日的电影',
+    '观看一部电影名中有植物的电影',
+    '观看一部电影名中有方位词的电影',
+    '观看一部电影名中有动词的电影',
+    '观看一部电影名中有动物的电影',
+    '观看一部电影名中有数字的电影',
+    '观看一部电影名中有颜色的电影',
+  ],
+  manga: [
+    '阅读一部标题超过12个字的漫画',
+    '阅读一部标题只有1个字的漫画',
+    '阅读一部标题中有标点符号的漫画',
+    '阅读一部标题中有人名的漫画',
+    '阅读一部标题中有地名的漫画',
+    '阅读一部标题中有食物的漫画',
+    '阅读一部标题中有天气现象的漫画',
+    '阅读一部标题中有时间词的漫画',
+    '阅读一部标题中有身体部位的漫画',
+    '阅读一部标题中有武器的漫画',
+    '阅读一部标题中有乐器的漫画',
+    '阅读一部标题中有节日的漫画',
+    '阅读一部标题中有植物的漫画',
+    '阅读一部标题中有方位词的漫画',
+    '阅读一部标题中有英文的日漫',
+    '阅读一部标题中有海洋生物的漫画',
+    '阅读一部标题含数字的漫画',
+    '阅读一部标题含颜色的漫画',
+    '阅读一部标题含主谓宾结构的漫画',
+    '阅读一部有宗教元素的漫画',
+    '阅读一部主角无敌的漫画',
+    '阅读一部主角平凡逆袭的漫画',
+    '阅读一部主角是反派或反英雄的漫画',
+    '阅读一部主角是动物或非人类的漫画',
+    '阅读一部双人搭档的漫画',
+    '阅读一部群像漫画',
+    '阅读一部主角有超能力的漫画',
+    '阅读一部主角没有超能力的漫画',
+    '阅读一部主角死亡的漫画（允许复活）',
+    '阅读一部世界毁灭的漫画（允许重建）',
+    '阅读一部四格漫画',
+    '阅读一部恐怖漫画',
+    '阅读一部科幻漫画',
+    '阅读一部搞笑漫画',
+    '阅读一部战斗类漫画',
+    '阅读一部运动类漫画',
+    '阅读一部音乐类漫画',
+    '阅读一部历史题材漫画',
+    '阅读一部奇幻题材漫画',
+    '阅读一部悬疑推理漫画',
+    '阅读一部末世/末日题材漫画',
+    '阅读一部时空穿越或轮回题材漫画',
+    '阅读一部异世界题材漫画',
+    '阅读一部少年向漫画',
+    '阅读一部纯爱漫画',
+    '阅读一部职场题材漫画',
+    '阅读一部校园漫画',
+    '阅读一部美食题材漫画',
+    '阅读一部恋爱喜剧漫画',
+    '阅读一部黑暗奇幻漫画',
+    '阅读一部后宫或逆后宫漫画',
+    '阅读一部美漫',
+    '阅读一部争议之作',
+    '阅读一部白毛角色的作品',
+    '阅读一部豆瓣9分以上的漫画',
+    '阅读一部同人文化发达的漫画',
+    '阅读一部名梗频出的漫画',
+    '阅读一部治愈系漫画',
+    '阅读一部致郁系漫画',
+    '阅读同一作者不同时期的两部漫画',
+    '阅读一部夫妻合作的漫画',
+    '阅读一部手冢奖作品',
+    '阅读一部昭和时代漫画',
+    '阅读一部在Jump连载的漫画',
+    '阅读一部「这部漫画真厉害」榜单的漫画',
+    '阅读一部平成黄金期作品',
+    '阅读一部2020年之后连载的新作',
+    '阅读一部有改编真人版的漫画',
+    '阅读一部朋友推荐的让人哭的漫画',
+    '阅读一部销量过亿的漫画',
+    '阅读一部小众神作但知名度低的漫画',
+    '阅读一部看过的人多但评分超低的漫画',
+    '阅读一部双男主漫画',
+    '阅读一部双女主漫画',
+    '阅读一部有非人生物角色的漫画',
+    '阅读一部有动画改编的漫画',
+    '阅读一部标题有真实地名的漫画',
+    '阅读一部古代宫廷背景的漫画',
+    '阅读一部女漫画家的作品',
+    '阅读一部带有魔法元素的漫画',
+    '阅读一部作者真实经历改编的漫画',
+    '阅读一部以动物为主角的漫画',
+    '阅读一部短篇作品集漫画',
+    '阅读一部文学作品改编的漫画',
+    '阅读一部国内原创漫画',
+    '阅读一部彩色条漫',
+    '阅读一部韩漫',
+    '阅读一部原作和作画为两人的漫画',
+    '阅读一部智斗题材的漫画',
+    '阅读一部「我喜欢的CV请去配这个」的漫画',
+    '随意阅读一部你喜欢的漫画',
+  ],
+  general: [
+    "阅读任意一篇您最近看过的文章，写下最让您印象深刻的观点",
+    "回想最近阅读的一本书，写下书中您最喜欢的一个场景",
+    "分享一个您从书中学到的人生道理，并说明它如何影响了您",
+    "描述一个您最近阅读中遇到的有趣词汇或表达，并解释其含义",
+    "写下您最喜欢的书中的一个角色，并说明喜欢他/她的原因",
+    "回顾最近读过的内容，写下它让您想到的一件生活中的事",
+    "分享一本您推荐给他人的书，说明推荐理由",
+    "写下一段让您感动或引发思考的阅读体验",
+    "描述您在阅读中学到的一个有趣历史知识",
+    "写下一个您想对某本书的作者说的问题或感谢"
+  ]
+};
+
+// ===================================
+// GAME STATE
+// ===================================
+let currentUser = null;
+let gameState = null; // { theme, size, seed, grid, treasureFound, startTime, elapsed, revealed, challenges }
+let pendingCell = null; // cell to reveal after confirm
+let currentScale = 1;
+let timerInterval = null;
+let isDragging = false, dragStartX, dragStartY, scrollLeft, scrollTop;
+let pinchStartDist = 0, pinchStartScale = 1;
+let selectedTheme = null;
+
+// ===================================
+// AUTH
+// ===================================
+function switchTab(tab, triggerEl) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  const activeBtn = triggerEl || [...document.querySelectorAll('.auth-tab')]
+    .find(t => (t.getAttribute('onclick')||'').includes("'" + tab + "'"));
+  if (activeBtn) activeBtn.classList.add('active');
+  const lf = document.getElementById('login-form');
+  const rf = document.getElementById('register-form');
+  lf.style.display = (tab === 'login') ? 'block' : 'none';
+  rf.style.display = (tab === 'register') ? 'block' : 'none';
+}
+
+function selectAvatar(el) {
+  document.querySelectorAll('.avatar-opt').forEach(a=>a.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('av-preview').textContent = el.dataset.av;
+}
+
+function switchAvatarTab(btn, cat) {
+  document.querySelectorAll('.av-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.avatar-opt').forEach(opt => {
+    opt.classList.toggle('hidden-av', !opt.classList.contains('av-'+cat));
+  });
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const av = document.querySelector('.avatar-opt.selected')?.dataset.av || '🦊';
+  const err = document.getElementById('reg-err');
+  if(!name||!pass||pass.length<4) { err.textContent='请填写完整信息（密码至少4位）'; err.style.display='block'; return; }
+  const users = DB.users();
+  if(users[name]) { err.textContent='该昵称已被使用'; err.style.display='block'; return; }
+  users[name] = { pass, avatar: av, joinDate: Date.now(), totalChallenges: 0, totalWins: 0, renameCount: 0 };
+  DB.saveUsers(users);
+  err.style.display='none';
+
+  // Show success toast
+  showToast('✦ 注册成功！欢迎 ' + name + ' ～');
+
+  // Switch to login tab and pre-fill nickname
+  switchTab('login', document.querySelector('.auth-tab'));
+  document.getElementById('login-name').value = name;
+  document.getElementById('login-pass').value = '';
+  setTimeout(() => document.getElementById('login-pass').focus(), 100);
+}
+
+function showToast(msg) {
+  const existing = document.getElementById('auth-toast');
+  if(existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.id = 'auth-toast';
+  toast.className = 'auth-toast';
+  toast.textContent = msg;
+  document.getElementById('auth-screen').appendChild(toast);
+  // Trigger animation
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 2800);
+}
+
+function doLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  const users = DB.users();
+  if(!users[name]||users[name].pass!==pass) { err.style.display='block'; return; }
+  err.style.display='none';
+  loginUser(name, users[name].avatar);
+}
+
+function loginUser(name, avatar) {
+  currentUser = { name, avatar };
+  document.getElementById('home-username').textContent = name;
+  document.getElementById('home-avatar').textContent = avatar;
+  const wn = document.getElementById('welcome-name'); if(wn) { wn.textContent = name + '侦探'; wn.style.color='#e8960a'; wn.style.fontWeight='bold'; }
+  showScreen('home-screen');
+}
+
+function doLogout() {
+  currentUser = null;
+  gameState = null;
+  stopTimer();
+  showScreen('auth-screen');
+}
+
+// ===================================
+// NAVIGATION
+// ===================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // scroll each screen container to top
+  const el = document.getElementById(id); if(el) el.scrollTop = 0;
+}
+
+function goHome() {
+  stopTimer();
+  closeAllModals();
+  showScreen('home-screen');
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.overlay').forEach(o=>{ o.classList.remove('show'); o.style.display = ''; });
+}
+
+function openModal(id) { 
+  const el = document.getElementById(id); 
+  if(el) { el.classList.add('show'); el.style.display = 'flex'; }
+}
+function closeModal(id) { 
+  const el = document.getElementById(id); 
+  if(el) { el.classList.remove('show'); el.style.display = ''; }
+}
+
+// ===================================
+// THEME & DIFFICULTY
+// ===================================
+function selectTheme(theme) {
+  if(theme==='random') {
+    const themes = ['literature','mystery','lightnovel','movie','manga','general'];
+    selectedTheme = themes[Math.floor(Math.random()*themes.length)];
+  } else {
+    selectedTheme = theme;
+  }
+  document.getElementById('diff-theme-title').textContent = THEME_NAMES[selectedTheme] + ' — 选择难度';
+  openModal('diff-overlay');
+}
+
+// ===================================
+// MAP GENERATION
+// ===================================
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 4294967296;
+  };
+}
+
+function generateMap(size, seed) {
+  const rand = seededRandom(seed);
+  const total = size * size;
+  
+  // Cell counts for 9x9 = 81 cells
+  // For 12x12 = 144 cells, scale up proportionally
+  let counts;
+  if(size === 6) {
+    // 6x6 = 36 cells
+    counts = { treasure:3, hint:3, firecracker:2, bomb:2, angel:2, challenge:24 };
+  } else if(size === 9) {
+    // 9x9 = 81 cells
+    counts = { treasure:6, hint:6, firecracker:4, bomb:4, angel:4, challenge:57 };
+  } else {
+    // 12x12 = 144
+    counts = { treasure:10, hint:10, firecracker:7, bomb:7, angel:7, challenge:103 };
+  }
+  // empty = total - all others
+
+  // Try generating valid map up to 50000 times
+  for(let attempt = 0; attempt < 50000; attempt++) {
+    const grid = tryGenerate(size, counts, rand);
+    if(grid) return { grid, counts };
+  }
+  // Fallback: generate without strict hint validation
+  return { grid: tryGenerate(size, counts, rand, true), counts };
+}
+
+function tryGenerate(size, counts, rand, relaxed=false) {
+  const grid = [];
+  const pool = [];
+  for(let i=0; i<counts.treasure; i++) pool.push('treasure');
+  for(let i=0; i<counts.hint; i++) pool.push('hint');
+  for(let i=0; i<(counts.firecracker||0); i++) pool.push('firecracker');
+  for(let i=0; i<counts.bomb; i++) pool.push('bomb');
+  for(let i=0; i<counts.angel; i++) pool.push('angel');
+  for(let i=0; i<counts.challenge; i++) pool.push('challenge');
+
+  // Fisher-Yates shuffle
+  for(let i=pool.length-1;i>0;i--) {
+    const j = Math.floor(rand()*pool.length);
+    [pool[i],pool[j]] = [pool[j],pool[i]];
+  }
+
+  // Fill grid
+  for(let r=0; r<size; r++) {
+    grid.push([]);
+    for(let c=0; c<size; c++) {
+      grid[r].push({ type: pool[r*size+c], revealed: false, eliminated: false });
+    }
+  }
+
+  // Validate: hints must have exactly 1 treasure neighbor
+  if(!relaxed) {
+    for(let r=0;r<size;r++) {
+      for(let c=0;c<size;c++) {
+        if(grid[r][c].type === 'hint') {
+          const neighbors = getNeighbors(r,c,size);
+          // Rule 1: exactly 1 treasure neighbor
+          const tCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='treasure').length;
+          if(tCount !== 1) return null;
+          // Rule 2: no hint cell adjacent to another hint cell
+          const hCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='hint').length;
+          if(hCount > 0) return null;
+        }
+        // Rule 3: bomb/firecracker must not be adjacent to each other
+        if(grid[r][c].type === 'bomb' || grid[r][c].type === 'firecracker') {
+          const neighbors = getNeighbors(r,c,size);
+          const explosiveNeighbor = neighbors.some(([nr,nc]) =>
+            grid[nr][nc].type==='bomb' || grid[nr][nc].type==='firecracker'
+          );
+          if(explosiveNeighbor) return null;
+        }
+        // Rule 4: treasure cells should not be adjacent to each other
+        if(grid[r][c].type === 'treasure') {
+          const neighbors = getNeighbors(r,c,size);
+          const tNeighbor = neighbors.some(([nr,nc]) => grid[nr][nc].type==='treasure');
+          if(tNeighbor) return null;
+        }
+      }
+    }
+  }
+
+  return grid;
+}
+
+function getNeighbors(r, c, size) {
+  const result = [];
+  for(let dr=-1;dr<=1;dr++) {
+    for(let dc=-1;dc<=1;dc++) {
+      if(dr===0&&dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if(nr>=0&&nr<size&&nc>=0&&nc<size) result.push([nr,nc]);
+    }
+  }
+  return result;
+}
+
+// ===================================
+// GAME START
+// ===================================
+function startGame(size) {
+  closeModal('diff-overlay');
+  const seed = Date.now() ^ (Math.random()*0xffffffff)|0;
+  const { grid } = generateMap(size, seed);
+  
+  // Build task pool
+  let baseTasks;
+  if(selectedTheme === 'general') {
+    // Mix 5 themes roughly equally
+    const sources = [CHALLENGES.literature, CHALLENGES.mystery, CHALLENGES.lightnovel, CHALLENGES.movie, CHALLENGES.manga||[]];
+    const maxLen = Math.max(...sources.map(s=>s.length));
+    baseTasks = [];
+    sources.forEach(src => {
+      // Take proportional slice to balance all themes
+      const ratio = Math.ceil(maxLen / src.length);
+      for(let i=0;i<ratio;i++) baseTasks.push(...src);
+    });
+  } else {
+    baseTasks = [...(CHALLENGES[selectedTheme] || CHALLENGES.literature)];
+  }
+
+  // Determine max repeat per task based on theme and difficulty
+  // lightnovel: max 2 repeats; movie: max 3/4/5 by difficulty; others: no repeat
+  let maxRepeat = 1;
+  if(selectedTheme === 'lightnovel') maxRepeat = 2;
+  if(selectedTheme === 'movie') maxRepeat = size === 6 ? 1 : size === 9 ? 2 : 3;
+  if(selectedTheme === 'manga') maxRepeat = size === 6 ? 1 : size === 9 ? 1 : 2;
+  if(selectedTheme === 'general') maxRepeat = 2;
+
+  // Build expanded pool
+  let rawTasks = [];
+  for(let rep = 0; rep < maxRepeat; rep++) rawTasks.push(...baseTasks);
+
+  // Shuffle pool (Fisher-Yates)
+  for(let i = rawTasks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rawTasks[i], rawTasks[j]] = [rawTasks[j], rawTasks[i]];
+  }
+
+  // Assign tasks to challenge cells
+  let taskIdx = 0;
+  for(let r=0;r<size;r++) {
+    for(let c=0;c<size;c++) {
+      if(grid[r][c].type==='challenge') {
+        grid[r][c].task = rawTasks[taskIdx % rawTasks.length];
+        taskIdx++;
+      }
+    }
+  }
+
+  gameState = {
+    theme: selectedTheme,
+    size,
+    seed,
+    grid,
+    treasureGoal: size === 6 ? 3 : size === 9 ? 6 : 10,
+    treasureFound: 0,
+    startTime: Date.now(),
+    elapsed: 0,
+    completedChallenges: [],
+    revealedCount: 0
+  };
+
+  document.getElementById('game-title').textContent = THEME_NAMES[selectedTheme] + ' 冒险';
+  document.getElementById('game-screen').dataset.theme = selectedTheme;
+  document.getElementById('treasure-count').textContent = '0';
+  document.getElementById('treasure-goal').textContent = size === 6 ? '3' : size === 9 ? '6' : '10';
+  document.getElementById('challenge-stepped').textContent = '0';
+  const totalChallenges = gameState.grid.flat().filter(c=>c.type==='challenge').length;
+  document.getElementById('challenge-total').textContent = totalChallenges;
+  currentScale = 1;
+  document.getElementById('zoom-val').textContent = '100%';
+
+  renderMap();
+  showScreen('game-screen');
+  startTimer();
+  setupMapInteraction();
+  setTimeout(updateLegendCounts, 100);
+
+  // If there was a pending draft challenge, auto-open it after a short delay
+  if(s.pendingDraftCell) {
+    const { r, c } = s.pendingDraftCell;
+    gameState.pendingDraftCell = s.pendingDraftCell;
+    setTimeout(() => {
+      showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！');
+      setTimeout(() => onChallenge(r, c), 800);
+    }, 600);
+  }
+}
+
+// ===================================
+// MAP RENDERING
+// ===================================
+const COL_LABELS = 'ABCDEFGHIJKL'.split('');
+const TYPE_INFO = {
+  treasure: { icon:'__YUANBAO__', label:'宝物', cls:'type-treasure' },
+  hint:     { icon:'__SHOVEL__', label:'铲子格', cls:'type-hint' },
+  firecracker: { icon:'🧨', label:'鞭炮', cls:'type-firecracker' },
+  bomb:     { icon:'💣', label:'炸弹', cls:'type-bomb' },
+  angel:    { icon:'😇', label:'天使', cls:'type-angel' },
+  challenge:{ icon:'📝', label:'挑战', cls:'type-challenge' },
+  empty:    { icon:'·', label:'', cls:'type-empty' }
+};
+
+function renderMap() {
+  const { grid, size } = gameState;
+  const table = document.getElementById('mapTable');
+  table.innerHTML = '';
+  
+  // Header row
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.appendChild(document.createElement('th')); // corner
+  for(let c=0;c<size;c++) {
+    const th = document.createElement('th');
+    th.textContent = COL_LABELS[c];
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  for(let r=0;r<size;r++) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = r+1;
+    tr.appendChild(th);
+    
+    for(let c=0;c<size;c++) {
+      const cell = grid[r][c];
+      const td = document.createElement('td');
+      td.className = 'map-cell';
+      td.dataset.row = r;
+      td.dataset.col = c;
+      
+      if(cell.eliminated) {
+        td.classList.add('revealed','eliminated');
+        const info = TYPE_INFO[cell.type];
+        td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?`<span style="opacity:0.4">${YUANBAO_IMG}</span>`:info.icon==='__SHOVEL__'?`<span style="opacity:0.4">${SHOVEL_IMG}</span>`:`<span class="cell-icon" style="opacity:0.4">${info.icon}</span>`}</div>`;
+      } else if(cell.revealed) {
+        td.classList.add('revealed', TYPE_INFO[cell.type].cls);
+        const info = TYPE_INFO[cell.type];
+        td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?YUANBAO_IMG:info.icon==='__SHOVEL__'?SHOVEL_IMG:(`<span class="cell-icon">${info.icon}</span>`)}${info.label?`<span class="cell-label">${info.label}</span>`:''}</div>`;
+      } else {
+        td.classList.add('hidden');
+        td.innerHTML = `<div class="cell-inner"><span class="cell-question">？</span></div>`;
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  // Single delegated click handler on the whole table
+  table.addEventListener('click', e => {
+    const td = e.target.closest('td.map-cell');
+    if(!td) return;
+    const r = parseInt(td.dataset.row);
+    const c = parseInt(td.dataset.col);
+    if(!isNaN(r) && !isNaN(c)) onCellClick(r, c);
+  });
+}
+
+function updateCell(r, c) {
+  const { grid, size } = gameState;
+  const cell = grid[r][c];
+  const td = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  if(!td) return;
+  
+  td.removeEventListener('click', td._clickHandler);
+  td.className = 'map-cell';
+  
+  if(cell.eliminated) {
+    // Treasure eliminated by bomb/firecracker shows in full gold
+    if(cell.type === 'treasure') {
+      td.classList.add('revealed', 'type-treasure');
+      td.innerHTML = `<div class="cell-inner">${YUANBAO_IMG}<span class="cell-label" style="color:#c8a840;">宝物</span></div>`;
+    } else {
+      td.classList.add('revealed','eliminated');
+      const info = TYPE_INFO[cell.type];
+      td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?`<span style="opacity:0.4">${YUANBAO_IMG}</span>`:info.icon==='__SHOVEL__'?`<span style="opacity:0.4">${SHOVEL_IMG}</span>`:`<span class="cell-icon" style="opacity:0.4">${info.icon}</span>`}</div>`;
+    }
+  } else if(cell.revealed) {
+    td.classList.add('revealed', TYPE_INFO[cell.type].cls);
+    const info = TYPE_INFO[cell.type];
+    if(cell.type === 'empty') {
+      td.innerHTML = `<div class="cell-inner"></div>`;
+    } else {
+      td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?YUANBAO_IMG:info.icon==='__SHOVEL__'?SHOVEL_IMG:(`<span class="cell-icon">${info.icon}</span>`)}${info.label?`<span class="cell-label">${info.label}</span>`:''}</div>`;
+    }
+  }
+}
+
+// ===================================
+// CELL INTERACTION
+// ===================================
+function onCellClick(r, c) {
+  const cell = gameState.grid[r][c];
+  if(cell.eliminated) return;
+  // If there's a pending draft challenge, only allow that specific cell
+  if(gameState.pendingDraftCell) {
+    const {r: pr, c: pc} = gameState.pendingDraftCell;
+    if(r !== pr || c !== pc) {
+      showToast('⚠ 请先完成未提交的阅读挑战！');
+      return;
+    }
+  }
+  if(cell.revealed && !(cell.type === 'challenge' && !cell.challengeDone)) return;
+  pendingCell = { r, c };
+  const coord = `${COL_LABELS[c]}${r+1}`;
+  const confirmEl = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-coords').textContent = coord;
+  // Force show the overlay directly
+  confirmEl.style.display = 'flex';
+  confirmEl.classList.add('show');
+}
+
+function confirmReveal() {
+  const confirmEl = document.getElementById('confirm-overlay');
+  confirmEl.style.display = 'none';
+  confirmEl.classList.remove('show');
+  if(!pendingCell) return;
+  const { r, c } = pendingCell;
+  pendingCell = null;
+  revealCell(r, c);
+}
+
+function revealCell(r, c) {
+  const { grid, size } = gameState;
+  const cell = grid[r][c];
+  if(cell.eliminated) return;
+  // Challenge cells: show modal even if already revealed (allow re-open for draft)
+  if(cell.type === 'challenge') {
+    if(!cell.challengeDone) {
+      onChallenge(r, c);
+      return;
+    }
+    return; // already completed
+  }
+  if(cell.revealed) return;
+  
+  cell.revealed = true;
+  gameState.revealedCount++;
+  updateCell(r, c);
+  updateLegendCounts();
+
+  switch(cell.type) {
+    case 'treasure': onTreasure(r, c); break;
+    case 'hint': onHint(r, c); break;
+    case 'firecracker': onFirecracker(r, c); break;
+    case 'bomb': onBomb(r, c); break;
+    case 'angel': onAngel(r, c); break;
+    case 'empty': break;
+  }
+}
+
+function onTreasure(r, c) {
+  gameState.treasureFound++;
+  document.getElementById('treasure-count').textContent = gameState.treasureFound;
+  triggerStarRain();
+  if(gameState.treasureFound >= gameState.treasureGoal) {
+    setTimeout(showWin, 800);
+  }
+}
+
+function onHint(r, c) {
+  playShovel();
+  const { grid, size } = gameState;
+  const neighbors = getNeighbors(r, c, size);
+  const count = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='treasure').length;
+  const coord = `${COL_LABELS[c]}${r+1}`;
+  document.getElementById('hint-text').innerHTML = 
+    `${SHOVEL_SMALL} 格子 <strong>${coord}</strong> 周围相邻的 <strong>${neighbors.length}</strong> 个格子中，<br>恰好有 <strong style="color:var(--gold);font-size:1.2em">${count}</strong> 个宝物！`;
+  openModal('hint-overlay');
+}
+
+function onFirecracker(r, c) {
+  const dirs = [
+    { label:'横向（整行）', icon:'↔️', dir:'row' },
+    { label:'纵向（整列）', icon:'↕️', dir:'col' },
+    { label:'左斜线（╲）', icon:'↘️', dir:'diag1' },
+    { label:'右斜线（╱）', icon:'↗️', dir:'diag2' }
+  ];
+  const container = document.getElementById('bomb-directions');
+  container.innerHTML = '';
+  dirs.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'dir-btn';
+    btn.innerHTML = `<span class="dir-icon">${d.icon}</span>${d.label}`;
+    btn.onclick = () => { closeModal('bomb-overlay'); eliminateDirection(r, c, d.dir); };
+    container.appendChild(btn);
+  });
+  document.getElementById('bomb-overlay-title').textContent = '🧨 鞭炮！选择消除方向';
+  playFirecracker();
+  document.getElementById('bomb-overlay-desc').textContent = '选择消除方向（以当前格为轴心，整条线消除）：';
+  openModal('bomb-overlay');
+}
+
+function onBomb(r, c) {
+  // Bomb: eliminate the surrounding 8 cells (ring)
+  const originTd = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  if(originTd) triggerBombExplosion(originTd);
+  document.getElementById('bomb-overlay-title').textContent = '💣 炸弹爆炸！';
+  playBombExplosion();
+
+  const { grid, size } = gameState;
+  const ring = getNeighbors(r, c, size);
+  let treasureHit = false;
+
+  let bombTreasureCount = 0;
+  ring.forEach(([nr, nc], idx) => {
+    const cell = grid[nr][nc];
+    if(!cell.revealed && !cell.eliminated) {
+      cell.eliminated = true;
+      if(cell.type === 'treasure') bombTreasureCount++;
+      setTimeout(() => {
+        const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
+        if(td) {
+          td.classList.add('eliminating');
+          setTimeout(() => updateCell(nr, nc), 380);
+        } else {
+          updateCell(nr, nc);
+        }
+      }, 40 + idx * 40);
+    }
+  });
+
+  updateLegendCounts();
+  if(bombTreasureCount > 0) {
+    gameState.treasureFound += bombTreasureCount;
+    document.getElementById('treasure-count').textContent = gameState.treasureFound;
+    setTimeout(() => triggerStarRain(false), ring.length * 40 + 200);
+    if(gameState.treasureFound >= gameState.treasureGoal) {
+      setTimeout(showWin, ring.length * 40 + 600);
+    }
+  }
+}
+
+function eliminateDirection(r, c, dir) {
+  const { grid, size } = gameState;
+  const cells = [];
+
+  if(dir === 'row') {
+    for(let i=0;i<size;i++) cells.push([r,i]);
+  } else if(dir === 'col') {
+    for(let i=0;i<size;i++) cells.push([i,c]);
+  } else if(dir === 'diag1') { // \
+    let startR = r - Math.min(r, c);
+    let startC = c - Math.min(r, c);
+    while(startR<size && startC<size) { cells.push([startR++, startC++]); }
+  } else { // /
+    let startR = r + Math.min(size-1-r, c);
+    let startC = c - Math.min(size-1-r, c);
+    while(startR>=0 && startC<size) { cells.push([startR--, startC++]); }
+  }
+
+  // Get origin cell screen position for explosion origin
+  const originTd = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  if(originTd) triggerBombExplosion(originTd);
+
+  let treasureHit = false;
+  let delay = 0;
+
+  let treasureCount = 0;
+  cells.forEach(([nr, nc], idx) => {
+    const cell = grid[nr][nc];
+    if(!cell.revealed && !cell.eliminated) {
+      cell.eliminated = true;
+      if(cell.type === 'treasure') treasureCount++;
+
+      // Staggered reveal animation
+      setTimeout(() => {
+        const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
+        if(td) {
+          td.classList.add('eliminating');
+          setTimeout(() => updateCell(nr, nc), 380);
+        } else {
+          updateCell(nr, nc);
+        }
+      }, 40 + idx * 30);
+    }
+  });
+
+  // Count eliminated treasures and check win condition
+  updateLegendCounts();
+  if(treasureCount > 0) {
+    gameState.treasureFound += treasureCount;
+    document.getElementById('treasure-count').textContent = gameState.treasureFound;
+    setTimeout(() => triggerStarRain(false), cells.length * 30 + 200);
+    if(gameState.treasureFound >= gameState.treasureGoal) {
+      setTimeout(showWin, cells.length * 30 + 600);
+    }
+  }
+}
+
+function triggerBombExplosion(originEl) {
+  const rect = originEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const pctX = (cx / window.innerWidth * 100).toFixed(1) + '%';
+  const pctY = (cy / window.innerHeight * 100).toFixed(1) + '%';
+
+  // Flash overlay
+  const flash = document.createElement('div');
+  flash.className = 'bomb-flash';
+  flash.style.setProperty('--fx', pctX);
+  flash.style.setProperty('--fy', pctY);
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 600);
+
+  // Shockwave ring
+  const wave = document.createElement('div');
+  wave.className = 'bomb-shockwave';
+  wave.style.left = cx + 'px';
+  wave.style.top  = cy + 'px';
+  document.body.appendChild(wave);
+  setTimeout(() => wave.remove(), 700);
+
+  // Flying particles
+  const parts = ['💥','🔥','✨','⚡','💫'];
+  for(let i = 0; i < 10; i++) {
+    const p = document.createElement('div');
+    p.className = 'bomb-particle';
+    p.textContent = parts[Math.floor(Math.random() * parts.length)];
+    const angle = (i / 10) * 360;
+    const dist = 60 + Math.random() * 80;
+    const tx = Math.cos(angle * Math.PI / 180) * dist + 'px';
+    const ty = Math.sin(angle * Math.PI / 180) * dist + 'px';
+    p.style.left = cx + 'px';
+    p.style.top  = cy + 'px';
+    p.style.setProperty('--tx', tx);
+    p.style.setProperty('--ty', ty);
+    p.style.animationDuration = (0.5 + Math.random() * 0.4) + 's';
+    p.style.animationDelay = (Math.random() * 0.1) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+
+function onAngel(r, c) {
+  const { grid, size } = gameState;
+  // Find all treasure positions
+  const treasures = [];
+  for(let rr=0;rr<size;rr++) {
+    for(let cc=0;cc<size;cc++) {
+      if(grid[rr][cc].type==='treasure' && !grid[rr][cc].revealed && !grid[rr][cc].eliminated) {
+        treasures.push([rr,cc]);
+      }
+    }
+  }
+  
+  if(treasures.length === 0) {
+    document.getElementById('angel-msg').textContent = '所有宝物都已被找到了！真厉害！';
+  } else {
+    const [tr, tc] = treasures[Math.floor(Math.random()*treasures.length)];
+    const useRow = Math.random() < 0.5;
+    const hint = useRow
+      ? `小天使悄悄告诉你：有一个宝物藏在第 ${tr+1} 行哦！✨`
+      : `小天使悄悄告诉你：有一个宝物藏在第 ${COL_LABELS[tc]} 列哦！✨`;
+    document.getElementById('angel-msg').textContent = hint;
+  }
+  openModal('angel-overlay');
+}
+
+let pendingChallengeCell = null;
+function onChallenge(r, c) {
+  const cell = gameState.grid[r][c];
+  pendingChallengeCell = { r, c };
+
+  const isMovie = gameState.theme === 'movie';
+  document.getElementById('challenge-theme-tag').textContent = THEME_NAMES[gameState.theme];
+  document.getElementById('challenge-task-text').textContent = cell.task || (isMovie ? '请观看您选择主题中的任意内容，写下观后感。' : '请阅读您选择主题中的任意内容，写下读后感。');
+  document.getElementById('challenge-modal-title').textContent = isMovie ? '🎬 观影挑战' : '📝 阅读挑战';
+  document.getElementById('challenge-label').textContent = isMovie ? '提交您的观后感（至少20字）：' : '提交您的读后感（至少20字）：';
+  document.getElementById('challenge-submit-btn').textContent = isMovie ? '✓ 提交观后感' : '✓ 提交读后感';
+  document.getElementById('review-input').placeholder = isMovie ? '写下您的观影感受...' : '写下您的阅读感受...';
+  document.getElementById('challenge-err').style.display = 'none';
+  const tipEl = document.getElementById('challenge-draft-tip'); if(tipEl) tipEl.classList.remove('show');
+
+  // Restore draft if one was saved for this cell
+  const draftKey = `draft_${currentUser.name}_${gameState.seed}_${r}_${c}`;
+  const draft = localStorage.getItem('xunbao_' + draftKey) || cell.draft || '';
+  document.getElementById('review-input').value = draft;
+  const len = draft.length;
+  document.getElementById('char-count').textContent = len + ' / 20';
+  document.getElementById('char-count').classList.toggle('ok', len >= 20);
+
+  openModal('challenge-overlay');
+}
+
+function updateCharCount() {
+  const val = document.getElementById('review-input').value;
+  const el = document.getElementById('char-count');
+  el.textContent = `${val.length} / 20`;
+  el.classList.toggle('ok', val.length >= 20);
+}
+
+function submitChallenge() {
+  const review = document.getElementById('review-input').value.trim();
+  if(review.length < 20) {
+    document.getElementById('challenge-err').style.display = 'block';
+    return;
+  }
+  document.getElementById('challenge-err').style.display = 'none';
+  closeModal('challenge-overlay');
+  
+  if(pendingChallengeCell) {
+    const { r, c } = pendingChallengeCell;
+    const cell = gameState.grid[r][c];
+    // Now mark the cell as revealed and completed
+    cell.revealed = true;
+    cell.challengeDone = true;
+    gameState.revealedCount++;
+    updateCell(r, c);
+    updateLegendCounts();
+    cell.review = review;
+    // Update challenge counter
+    const stepped = document.getElementById('challenge-stepped');
+    if(stepped) stepped.textContent = parseInt(stepped.textContent||0) + 1;
+    gameState.completedChallenges.push({
+      theme: gameState.theme,
+      task: cell.task,
+      review,
+      date: Date.now()
+    });
+    
+    // Save to history
+    const hist = DB.history();
+    hist.push({ user: currentUser.name, theme: gameState.theme, task: cell.task, review, date: Date.now() });
+    DB.saveHistory(hist);
+    
+    // Update user stats
+    const users = DB.users();
+    if(users[currentUser.name]) {
+      users[currentUser.name].totalChallenges = (users[currentUser.name].totalChallenges||0) + 1;
+      DB.saveUsers(users);
+    }
+    gameState.pendingDraftCell = null;
+    pendingChallengeCell = null;
+  }
+}
+
+function saveDraft() {
+  const review = document.getElementById('review-input').value;
+  if(!pendingChallengeCell) return;
+  const { r, c } = pendingChallengeCell;
+  const cell = gameState.grid[r][c];
+  cell.draft = review;
+  // Persist draft to localStorage
+  const draftKey = `draft_${currentUser.name}_${gameState.seed}_${r}_${c}`;
+  localStorage.setItem('xunbao_' + draftKey, review);
+  // Store pending challenge cell
+  gameState.pendingDraftCell = { r, c };
+  // Show tip
+  const tip = document.getElementById('challenge-draft-tip');
+  tip.classList.add('show');
+  // Auto-save the game
+  saveGame();
+  // Close modal, then exit to home after saving
+  closeModal('challenge-overlay');
+  setTimeout(() => { stopTimer(); showScreen('home-screen'); }, 300);
+}
+
+// ===================================
+// WIN
+// ===================================
+function showWin() {
+  stopTimer();
+  const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+  const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
+  const secs = String(elapsed%60).padStart(2,'0');
+  document.getElementById('win-time').textContent = `⏱ 用时：${mins}:${secs}`;
+  const doneCount = gameState.grid ? gameState.grid.flat().filter(c=>c.challengeDone).length : 0;
+  document.getElementById('win-challenges').textContent = `📝 完成挑战：${doneCount} 个`;
+
+  // Update user wins
+  const users = DB.users();
+  if(users[currentUser.name]) {
+    users[currentUser.name].totalWins = (users[currentUser.name].totalWins||0)+1;
+    DB.saveUsers(users);
+  }
+
+  // Save win record to personal leaderboard
+  saveWinRecord(elapsed);
+
+  openModal('win-overlay');
+  triggerStarRain(true);
+}
+
+function saveWinRecord(elapsed) {
+  const key = 'leaderboard_' + currentUser.name;
+  let records = JSON.parse(localStorage.getItem('xunbao_' + key) || '[]');
+  records.push({
+    theme: gameState.theme,
+    size: gameState.size,
+    elapsed,
+    challenges: gameState.completedChallenges ? gameState.completedChallenges.length : 0,
+    date: Date.now()
+  });
+  localStorage.setItem('xunbao_' + key, JSON.stringify(records));
+}
+
+function getWinRecords() {
+  const key = 'leaderboard_' + currentUser.name;
+  return JSON.parse(localStorage.getItem('xunbao_' + key) || '[]');
+}
+
+// ===================================
+// TIMER
+// ===================================
+function startTimer() {
+  stopTimer();
+  const start = gameState.startTime;
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now()-start)/1000);
+    const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
+    const secs = String(elapsed%60).padStart(2,'0');
+    document.getElementById('game-timer').textContent = `${mins}:${secs}`;
+  }, 1000);
+}
+
+function stopTimer() {
+  if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+}
+
+// ===================================
+// STAR RAIN
+// ===================================
+function triggerStarRain(big=false) {
+  playGoldRain();
+  const container = document.getElementById('starRain');
+  const count = big ? 60 : 20;
+  for(let i=0;i<count;i++) {
+    const star = document.createElement('div');
+    star.className = 'star-particle';
+    const rainItems = ['🌟','✨','💛','💫','🌟'];
+    const ri = Math.floor(Math.random()*6);
+    if(ri < 2) {
+      star.innerHTML = YUANBAO_IMG;
+      star.style.background = 'none';
+    } else {
+      star.textContent = rainItems[Math.floor(Math.random()*rainItems.length)];
+    }
+    star.style.left = Math.random()*100 + 'vw';
+    star.style.animationDuration = (1.5+Math.random()*2) + 's';
+    star.style.animationDelay = Math.random()*0.8 + 's';
+    star.style.fontSize = (16+Math.random()*16) + 'px';
+    container.appendChild(star);
+    setTimeout(()=>star.remove(), 4000);
+  }
+}
+
+
+// ===================================
+// SOUND EFFECTS (Web Audio)
+// ===================================
+let audioCtx = null;
+function getAudioCtx() {
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playFirecracker() {
+  try {
+    const ctx = getAudioCtx();
+    // Series of rapid pops
+    [0, 0.05, 0.12, 0.18, 0.25, 0.3].forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800 + Math.random()*400, ctx.currentTime + t);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + t + 0.08);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.1);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.12);
+    });
+  } catch(e) {}
+}
+
+function playBombExplosion() {
+  try {
+    const ctx = getAudioCtx();
+    // Deep boom
+    const bufSize = ctx.sampleRate * 0.6;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 2);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 180;
+    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(1.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    src.start();
+    src.stop(ctx.currentTime + 0.65);
+    // High crack on top
+    const osc = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc.connect(g2); g2.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.15);
+    g2.gain.setValueAtTime(0.4, ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(); osc.stop(ctx.currentTime + 0.2);
+  } catch(e) {}
+}
+
+
+function playShovel() {
+  try {
+    const ctx = getAudioCtx();
+    // Dirt scraping sound: short filtered noise burst
+    const bufSize = Math.floor(ctx.sampleRate * 0.18);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 1.5);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1200;
+    filter.Q.value = 0.8;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    src.start(); src.stop(ctx.currentTime + 0.2);
+    // Quick metallic clink after
+    const osc = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc.connect(g2); g2.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1800, ctx.currentTime + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.15);
+    g2.gain.setValueAtTime(0.15, ctx.currentTime + 0.05);
+    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime + 0.05);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch(e) {}
+}
+
+function playGoldRain() {
+  try {
+    const ctx = getAudioCtx();
+    // Bright chime
+    [0, 0.08, 0.16].forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = [1047, 1319, 1568][i];
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.5);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.6);
+    });
+  } catch(e) {}
+}
+
+// ===================================
+// ZOOM & PAN
+// ===================================
+function zoomMap(delta) {
+  currentScale = Math.max(0.5, Math.min(2.5, currentScale+delta));
+  document.getElementById('mapWrapper').style.transform = `scale(${currentScale})`;
+  document.getElementById('zoom-val').textContent = Math.round(currentScale*100)+'%';
+}
+
+function setupMapInteraction() {
+  const container = document.getElementById('mapContainer');
+
+  // Touch pinch zoom only - clicks handled by table delegation
+  container.addEventListener('touchstart', e => {
+    if(e.touches.length === 2) {
+      pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartScale = currentScale;
+    }
+  }, { passive: true });
+
+  container.addEventListener('touchmove', e => {
+    if(e.touches.length === 2) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scale = Math.max(0.5, Math.min(2.5, pinchStartScale * (dist / pinchStartDist)));
+      currentScale = scale;
+      document.getElementById('mapWrapper').style.transform = `scale(${scale})`;
+      document.getElementById('zoom-val').textContent = Math.round(scale * 100) + '%';
+    }
+  }, { passive: false });
+}
+
+// ===================================
+// SAVE / LOAD
+// ===================================
+function saveGame(exitAfter=false) {
+  if(!gameState||!currentUser) return;
+  const saves = DB.saves();
+  if(!saves[currentUser.name]) saves[currentUser.name] = {};
+  const key = `${gameState.theme}_${gameState.seed}`;
+  saves[currentUser.name][key] = {
+    theme: gameState.theme,
+    size: gameState.size,
+    seed: gameState.seed,
+    grid: gameState.grid.map(row=>row.map(cell=>({...cell}))),
+    treasureFound: gameState.treasureFound,
+    startTime: gameState.startTime,
+    elapsed: Math.floor((Date.now()-gameState.startTime)/1000),
+    completedChallenges: gameState.completedChallenges,
+    revealedCount: gameState.revealedCount,
+    pendingDraftCell: gameState.pendingDraftCell || null,
+    savedAt: Date.now()
+  };
+  DB.saveSaves(saves);
+
+  const btn = document.getElementById('save-btn');
+  if(btn) {
+    btn.textContent = '✓ 已存档';
+    btn.style.background = 'var(--green)';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.textContent = '💾 存档';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 1000);
+  }
+
+  if(exitAfter) {
+    setTimeout(() => { stopTimer(); showScreen('home-screen'); }, 800);
+  }
+}
+
+function showSavedGames() {
+  const saves = DB.saves();
+  const userSaves = saves[currentUser?.name] || {};
+  const list = document.getElementById('saved-list');
+  list.innerHTML = '';
+  
+  const keys = Object.keys(userSaves);
+  if(keys.length === 0) {
+    list.innerHTML = '<div class="empty-state">暂无存档</div>';
+  } else {
+    keys.sort((a,b)=>userSaves[b].savedAt-userSaves[a].savedAt).forEach(key => {
+      const s = userSaves[key];
+      const d = new Date(s.savedAt);
+      const item = document.createElement('div');
+      item.className = 'saved-item';
+      item.innerHTML = `
+        <div class="saved-info">
+          <div class="saved-title">${THEME_NAMES[s.theme]} · ${s.size}×${s.size}</div>
+          <div class="saved-sub">⭐ ${s.treasureFound}/${s.size===6?3:s.size===9?6:10} · ${d.toLocaleDateString('zh-CN')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</div>
+        </div>
+        <button class="btn btn-primary" style="width:auto;font-size:7px;padding:8px 12px" onclick="loadGame('${key}')">继续</button>
+      `;
+      list.appendChild(item);
+    });
+  }
+  openModal('saved-overlay');
+}
+
+function loadGame(key) {
+  closeModal('saved-overlay');
+  const saves = DB.saves();
+  const s = saves[currentUser?.name]?.[key];
+  if(!s) return;
+  
+  gameState = {
+    theme: s.theme,
+    size: s.size,
+    seed: s.seed,
+    grid: s.grid,
+    treasureGoal: s.size === 6 ? 3 : s.size === 9 ? 6 : 10,
+    treasureFound: s.treasureFound,
+    startTime: Date.now() - (s.elapsed||0)*1000,
+    completedChallenges: s.completedChallenges || [],
+    revealedCount: s.revealedCount || 0
+  };
+  
+  document.getElementById('game-title').textContent = THEME_NAMES[s.theme] + ' 冒险';
+  document.getElementById('game-screen').dataset.theme = s.theme;
+  document.getElementById('treasure-count').textContent = s.treasureFound;
+  document.getElementById('treasure-goal').textContent = s.size === 6 ? '3' : s.size === 9 ? '6' : '10';
+  const loadedChallengesDone = s.grid ? s.grid.flat().filter(c=>c.challengeDone).length : 0;
+  const loadedChallengesTotal = s.grid ? s.grid.flat().filter(c=>c.type==='challenge').length : 0;
+  document.getElementById('challenge-stepped').textContent = loadedChallengesDone;
+  document.getElementById('challenge-total').textContent = loadedChallengesTotal;
+  currentScale = 1;
+  document.getElementById('zoom-val').textContent = '100%';
+  
+  renderMap();
+  showScreen('game-screen');
+  startTimer();
+  setupMapInteraction();
+  setTimeout(updateLegendCounts, 100);
+
+  // If there was a pending draft challenge, auto-open it after a short delay
+  if(s.pendingDraftCell) {
+    const { r, c } = s.pendingDraftCell;
+    gameState.pendingDraftCell = s.pendingDraftCell;
+    setTimeout(() => {
+      showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！');
+      setTimeout(() => onChallenge(r, c), 800);
+    }, 600);
+  }
+}
+
+// ===================================
+// PROFILE
+// ===================================
+function showProfile() {
+  closeAllModals();
+  if(!currentUser) return;
+  
+  const users = DB.users();
+  const user = users[currentUser.name] || {};
+  
+  document.getElementById('profile-card').innerHTML = `
+    <div class="profile-avatar">${currentUser.avatar}</div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;">
+          <div class="profile-name">${currentUser.name}</div>
+          <button onclick="showRenameModal()" style="font-family:var(--pixel);font-size:7px;padding:3px 8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">✏ 改名</button>
+          <span style="font-family:var(--pixel);font-size:6px;color:var(--text3);">改名×${user.renameCount||0}</span>
+        </div>
+      <div class="profile-stats">
+        <div class="pstat">挑战完成 <span>${user.totalChallenges||0}</span></div>
+        <div class="pstat">获胜次数 <span>${user.totalWins||0}</span></div>
+        <div class="pstat">改名次数 <span>${user.renameCount||0}</span></div>
+      </div>
+    </div>
+  `;
+  
+  // Render personal leaderboard
+  renderLeaderboard('all');
+
+  // Reset history tab to 'all'
+  document.querySelectorAll('#hist-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  const allHistTab = document.querySelector('#hist-tabs .lb-tab');
+  if(allHistTab) allHistTab.classList.add('active');
+  renderHistoryList('all');
+  
+  showScreen('profile-screen');
+}
+
+
+
+function switchHistTab(btn, theme) {
+  document.querySelectorAll('#hist-tabs .lb-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory(theme);
+}
+
+function renderHistory(filterTheme) {
+  const hist = window._allHist || [];
+  const filtered = filterTheme === 'all' ? hist : hist.filter(h => h.theme === filterTheme);
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if(filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">还没有挑战记录<br>快去探索地图吧！</div>';
+    return;
+  }
+  [...filtered].reverse().forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const d = new Date(h.date);
+    item.innerHTML = '<div class="history-meta"><span class="history-tag">' + (THEME_NAMES[h.theme]||h.theme) + '</span><span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">' + d.toLocaleDateString('zh-CN') + '</span></div><div class="history-task">📋 ' + h.task + '</div><div class="history-review">' + h.review + '</div>';
+    list.appendChild(item);
+  });
+}
+
+// ===================================
+// PERSONAL LEADERBOARD
+// ===================================
+function switchLbTab(btn, theme) {
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard(theme);
+}
+
+function fmtTime(secs) {
+  const m = Math.floor(secs / 60).toString().padStart(2,'0');
+  const s = (secs % 60).toString().padStart(2,'0');
+  return m + ':' + s;
+}
+
+function renderLeaderboard(filterTheme) {
+  const container = document.getElementById('lb-content');
+  if(!container) return;
+  const records = getWinRecords();
+
+  // Filter by theme
+  let filtered = filterTheme === 'all' ? [...records] : records.filter(r => r.theme === filterTheme);
+
+  if(filtered.length === 0) {
+    container.innerHTML = '<div class="lb-empty">还没有通关记录<br>完成一局游戏后成绩将显示在这里</div>';
+    return;
+  }
+
+  // For total board: group by theme+size, keep only best (shortest time)
+  // For theme board: sort by size then time
+  const bestMap = {};
+  filtered.forEach(r => {
+    const k = r.theme + '_' + r.size;
+    if(!bestMap[k] || r.elapsed < bestMap[k].elapsed) bestMap[k] = r;
+  });
+
+  // All records sorted by elapsed
+  const sorted = filtered.slice().sort((a,b) => a.elapsed - b.elapsed);
+
+  const DIFF_LABEL = { 6:'难度一', 9:'难度二', 12:'难度三' };
+
+  let rows = '';
+  sorted.forEach((r, i) => {
+    const rankCls = i===0?'lb-rank-1':i===1?'lb-rank-2':i===2?'lb-rank-3':'lb-rank-other';
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+    const d = new Date(r.date).toLocaleDateString('zh-CN');
+    const themeShow = filterTheme === 'all' ? `<span class="lb-theme-badge">${THEME_NAMES[r.theme]||r.theme}</span> ` : '';
+    rows += `<tr>
+      <td class="lb-rank ${rankCls}">${medal}</td>
+      <td>${themeShow}${DIFF_LABEL[r.size]||r.size+'×'+r.size}</td>
+      <td class="lb-time">⏱ ${fmtTime(r.elapsed)}</td>
+      <td>${r.challenges||0} 个挑战</td>
+      <td style="font-size:11px;color:var(--text3)">${d}</td>
+    </tr>`;
+  });
+
+  container.innerHTML = `
+    <table class="lb-table">
+      <thead><tr>
+        <th>排名</th>
+        <th>主题 / 难度</th>
+        <th>通关时间</th>
+        <th>完成挑战</th>
+        <th>日期</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+
+function showRenameModal() {
+  document.getElementById('rename-current').textContent = currentUser.name;
+  document.getElementById('rename-input').value = '';
+  document.getElementById('rename-err').style.display = 'none';
+  openModal('rename-overlay');
+}
+
+function confirmRename() {
+  const newName = document.getElementById('rename-input').value.trim().slice(0, 20);
+  if(!newName) return;
+  const current = currentUser.name;
+  const users = DB.users();
+  if(users[newName] && newName !== current) {
+    document.getElementById('rename-err').style.display = 'block';
+    return;
+  }
+  if(users[current]) {
+    users[newName] = { ...users[current] };
+    users[newName].renameCount = (users[newName].renameCount||0) + 1;
+    if(newName !== current) delete users[current];
+    DB.saveUsers(users);
+  }
+  currentUser.name = newName;
+  document.getElementById('home-username').textContent = newName;
+  if(users[newName]) { users[newName].renameCount = (users[newName].renameCount||0)+1; DB.saveUsers(users); }
+  const wn = document.getElementById('welcome-name');
+  if(wn) { wn.textContent = newName + '侦探'; wn.style.color='#e8960a'; wn.style.fontWeight='bold'; }
+  closeModal('rename-overlay');
+  showProfile();
+}
+
+
+// Auto-save on unexpected exit
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && gameState && currentUser) {
+    saveGame();
+  }
+});
+window.addEventListener('beforeunload', () => {
+  if(gameState && currentUser) saveGame();
+});
+
+
+function peekMap(on) {
+  const overlay = document.getElementById('bomb-overlay');
+  if(on) {
+    overlay.classList.add('peeking');
+  } else {
+    overlay.classList.remove('peeking');
+  }
+}
+
+
+function switchHistTab(btn, theme) {
+  document.querySelectorAll('#hist-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistoryList(theme);
+}
+
+function renderHistoryList(filterTheme) {
+  const hist = DB.history().filter(h => h.user === currentUser.name);
+  const filtered = filterTheme === 'all' ? [...hist] : hist.filter(h => h.theme === filterTheme);
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if(filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">暂无记录</div>';
+    return;
+  }
+  [...filtered].reverse().forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const d = new Date(h.date);
+    const themeName = THEME_NAMES[h.theme] || h.theme;
+    const dateStr = d.toLocaleDateString('zh-CN');
+    item.innerHTML = '<div class="history-meta"><span class="history-tag">' + themeName + '</span><span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">' + dateStr + '</span></div><div class="history-task">📋 ' + h.task + '</div><div class="history-review">' + h.review + '</div>';
+    list.appendChild(item);
+  });
+}
+
+
+function updateLegendCounts() {
+  if(!gameState || !gameState.grid) return;
+  const grid = gameState.grid.flat();
+  const types = ['treasure','hint','firecracker','bomb','angel','challenge'];
+  types.forEach(t => {
+    const el = document.getElementById('leg-' + t);
+    if(!el) return;
+    const total = grid.filter(c => c.type === t).length;
+    const used = grid.filter(c => c.type === t && (c.revealed || c.eliminated || c.challengeDone)).length;
+    const remaining = total - used;
+    el.textContent = remaining > 0 ? '剩余 ' + remaining + '/' + total : '（已全部使用）';
+  });
+}
+
+// ===================================
+// KEYBOARD SHORTCUTS
+// ===================================
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') closeAllModals();
+  if(document.getElementById('game-screen').classList.contains('active')) {
+    if(e.key==='+' || e.key==='=') zoomMap(0.1);
+    if(e.key==='-') zoomMap(-0.1);
+  }
+});
+
+// ===================================
+// INIT
+// ===================================
+// Allow Enter to submit login
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-name').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+document.getElementById('reg-pass').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+
+// Init avatar tab — show only animals on load
+document.querySelectorAll('.avatar-opt').forEach(opt => {
+  if(!opt.classList.contains('av-animals')) opt.classList.add('hidden-av');
+});
+// Update switchAvatarTab to handle all 6 categories
+
+
+
+
+
+
+</script>
+
+
+<!-- Difficulty Modal -->
+<div class="overlay" id="diff-overlay">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title" id="diff-theme-title">选择难度</div>
+      <button class="modal-close" onclick="closeModal('diff-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="diff-options" style="grid-template-columns:repeat(3,1fr)">
+        <div class="diff-card" onclick="startGame(6)">
+          <span class="diff-num">1</span>
+          <div class="diff-label">入门</div>
+          <div class="diff-size">6×6 格子</div>
+        </div>
+        <div class="diff-card" onclick="startGame(9)">
+          <span class="diff-num">2</span>
+          <div class="diff-label">进阶</div>
+          <div class="diff-size">9×9 格子</div>
+        </div>
+        <div class="diff-card" onclick="startGame(12)">
+          <span class="diff-num">3</span>
+          <div class="diff-label">挑战</div>
+          <div class="diff-size">12×12 格子</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="confirm-overlay">
+  <div class="modal" style="max-width:300px">
+    <div class="modal-header">
+      <div class="modal-title">⚠ 确认操作</div>
+      <button class="modal-close" onclick="closeModal('confirm-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-coords" id="confirm-coords">A1</div>
+      <div class="confirm-text">确定要打开这个格子吗？</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('confirm-overlay')">取消</button>
+      <button class="btn btn-primary" onclick="confirmReveal()" style="width:auto">确认翻开</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hint Modal -->
+<div class="overlay" id="hint-overlay">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <div class="modal-title">🔔 铲子格提示</div>
+      <button class="modal-close" onclick="closeModal('hint-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint-box" id="hint-text"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-green" onclick="closeModal('hint-overlay')" style="width:100%">明白了！</button>
+    </div>
+  </div>
+</div>
+
+<!-- Angel Modal -->
+<div class="overlay" id="angel-overlay">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-header">
+      <div class="modal-title">😇 幸运天使</div>
+      <button class="modal-close" onclick="closeModal('angel-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint-box" id="angel-text">
+        <span class="hint-icon">😇</span>
+        <span id="angel-msg"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-green" onclick="closeModal('angel-overlay')" style="width:100%">谢谢天使！</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bomb Modal -->
+<div class="overlay" id="bomb-overlay">
+  <div class="modal" style="max-width:360px" id="bomb-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="bomb-overlay-title">💣 炸弹爆炸！</div>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-text" style="margin-bottom:12px" id="bomb-overlay-desc">选择消除方向（以当前格为轴心）：</div>
+      <div class="bomb-directions" id="bomb-directions"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;padding-top:8px;">
+      <button class="btn btn-ghost" id="peek-map-btn" style="font-size:9px;width:100%;" 
+        onmousedown="peekMap(true)" onmouseup="peekMap(false)" 
+        ontouchstart="peekMap(true)" ontouchend="peekMap(false)">
+        👁 按住查看局势
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Challenge Modal -->
+<div class="overlay" id="challenge-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="challenge-modal-title">📝 阅读挑战</div>
+    </div>
+    <div class="modal-body">
+      <div class="challenge-info">
+        <div class="challenge-tag" id="challenge-theme-tag">文学</div>
+        <div id="challenge-task-text">请完成以下挑战任务...</div>
+      </div>
+      <div class="form-label" style="margin-bottom:8px" id="challenge-label">提交您的读后感（至少20字）：</div>
+      <textarea class="review-input" id="review-input" placeholder="写下您的阅读感受..." oninput="updateCharCount()"></textarea>
+      <div class="char-count" id="char-count">0 / 20</div>
+      <div class="err-msg" id="challenge-err" style="display:none">请输入至少20个字符</div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column; gap:8px;">
+      <button class="btn btn-primary" onclick="submitChallenge()" style="width:100%" id="challenge-submit-btn">✓ 提交读后感</button>
+      <button class="btn btn-ghost" onclick="saveDraft()" style="width:100%; font-size:8px;">📌 稍后再写 — 保存草稿</button>
+    </div>
+    <div class="challenge-draft-tip" id="challenge-draft-tip">草稿已保存，下次点开此格子将自动恢复</div>
+  </div>
+</div>
+
+<!-- Win Modal -->
+<div class="overlay" id="win-overlay">
+  <div class="modal win-modal" style="max-width:360px">
+    <div class="modal-body" style="padding:32px">
+      <span class="win-stars">🏆</span>
+      <div class="win-title">侦探成功！</div>
+      <div class="win-time" id="win-time">用时：05:23</div>
+      <div class="win-challenges" id="win-challenges" style="font-family:var(--pixel);font-size:9px;color:var(--text3);margin:8px 0;">完成挑战：0 个</div>
+      <div class="win-msg">恭喜您找到了全部宝藏！<br>黄金侦探任务圆满完成！</div>
+    </div>
+    <div class="modal-footer" style="justify-content:center; gap:12px">
+      <button class="btn btn-ghost" onclick="closeModal('win-overlay'); goHome()">返回主页</button>
+      <button class="btn btn-primary" style="width:auto" onclick="closeModal('win-overlay'); showProfile()">查看记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- Saved Games Modal -->
+<div class="overlay" id="saved-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📁 游戏存档</div>
+      <button class="modal-close" onclick="closeModal('saved-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="saved-list" id="saved-list"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Rename Modal -->
+<div class="overlay" id="rename-overlay">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header">
+      <div class="modal-title" style="font-family:var(--pixel);font-size:10px;">✏ 修改昵称</div>
+      <button class="modal-close" onclick="closeModal('rename-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:var(--pixel);font-size:8px;color:var(--text3);margin-bottom:12px;">
+        当前昵称：<span id="rename-current" style="color:#e8960a;"></span>
+      </div>
+      <div class="form-label">输入新昵称（最多20字）</div>
+      <input class="form-input" id="rename-input" type="text" maxlength="20" placeholder="新昵称...">
+      <div class="err-msg" id="rename-err" style="display:none;margin-top:8px;">该昵称已被使用，请换一个！</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('rename-overlay')">取消</button>
+      <button class="btn btn-primary" style="width:auto" onclick="confirmRename()">✓ 确认改名</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
