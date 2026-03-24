@@ -2788,22 +2788,24 @@ function switchAvatarTab(btn, cat) {
   });
 }
 
-function doRegister() {
+async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const pass = document.getElementById('reg-pass').value;
   const av = document.querySelector('.avatar-opt.selected')?.dataset.av || '🦊';
   const err = document.getElementById('reg-err');
   if(!name||!pass||pass.length<4) { err.textContent='请填写完整信息（密码至少4位）'; err.style.display='block'; return; }
+  // Check Supabase for existing user
+  const existing = await SB.getUser(name);
+  if(existing) { err.textContent='该昵称已被使用'; err.style.display='block'; return; }
+  // Create in Supabase
+  const result = await SB.createUser(name, pass, av);
+  if(!result) { err.textContent='注册失败，请重试'; err.style.display='block'; return; }
+  // Also save locally as backup
   const users = DB.users();
-  if(users[name]) { err.textContent='该昵称已被使用'; err.style.display='block'; return; }
   users[name] = { pass, avatar: av, joinDate: Date.now(), totalChallenges: 0, totalWins: 0, renameCount: 0 };
   DB.saveUsers(users);
   err.style.display='none';
-
-  // Show success toast
   showToast('✦ 注册成功！欢迎 ' + name + ' ～');
-
-  // Switch to login tab and pre-fill nickname
   switchTab('login', document.querySelector('.auth-tab'));
   document.getElementById('login-name').value = name;
   document.getElementById('login-pass').value = '';
@@ -2831,10 +2833,20 @@ async function doLogin() {
   const pass = document.getElementById('login-pass').value;
   const err = document.getElementById('login-err');
   if(!name||!pass) { err.style.display='block'; return; }
-  const user = await SB.getUser(name);
-  if(!user || user.pass !== pass) { err.style.display='block'; return; }
+  // Try Supabase first
+  let avatar = '🦊';
+  const sbUser = await SB.getUser(name);
+  if(sbUser) {
+    if(sbUser.pass !== pass) { err.style.display='block'; return; }
+    avatar = sbUser.avatar || '🦊';
+  } else {
+    // Fallback to localStorage
+    const users = DB.users();
+    if(!users[name] || users[name].pass !== pass) { err.style.display='block'; return; }
+    avatar = users[name].avatar || '🦊';
+  }
   err.style.display='none';
-  loginUser(name, user.avatar);
+  loginUser(name, avatar);
 }
 
 function loginUser(name, avatar) {
