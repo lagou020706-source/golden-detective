@@ -1523,6 +1523,21 @@ body::before {
 }
 .gln-wrap .gln { display: block; }
 
+
+.glb-avatar { font-size: 20px; }
+.glb-name { font-family: var(--pixel); font-size: 8px; color: var(--text); }
+.glb-meta { font-size: 11px; color: var(--text2); }
+.glb-time { font-family: var(--pixel); font-size: 10px; color: #e8960a; }
+.glb-self { background: rgba(232,150,10,0.08) !important; }
+
+
+.lb-theme-badge.th-literature { background:rgba(124,92,191,0.15); color:#5a3fa0; border-color:rgba(124,92,191,0.4); }
+.lb-theme-badge.th-mystery    { background:rgba(26,58,106,0.12);  color:#0d2a58; border-color:rgba(26,58,106,0.35); }
+.lb-theme-badge.th-lightnovel { background:rgba(200,80,154,0.12); color:#a02858; border-color:rgba(200,80,154,0.35); }
+.lb-theme-badge.th-movie      { background:rgba(74,74,90,0.12);   color:#3a3a4a; border-color:rgba(74,74,90,0.35); }
+.lb-theme-badge.th-manga      { background:rgba(42,122,58,0.12);  color:#1a5a2a; border-color:rgba(42,122,58,0.35); }
+.lb-theme-badge.th-general    { background:rgba(200,128,64,0.15); color:#a05000; border-color:rgba(200,128,64,0.4); }
+
 /* Save btn */
 #save-btn {
   font-family: var(--pixel);
@@ -2158,6 +2173,14 @@ body::before {
   <div class="profile-content">
     <div class="profile-card" id="profile-card"></div>
 
+    <!-- Profile view tabs: 我的 / 全服 -->
+    <div class="lb-tabs" id="profile-view-tabs" style="margin-bottom:16px">
+      <button class="lb-tab active" onclick="switchProfileView(this,'mine')">🏅 我的成绩</button>
+      <button class="lb-tab" onclick="switchProfileView(this,'global')">🌐 世界排行</button>
+    </div>
+
+    <!-- MY SCORES -->
+    <div id="profile-mine">
     <div class="section-title" style="margin-bottom:12px">◈ 我的最佳成绩</div>
     <div class="lb-tabs" id="lb-tabs">
       <button class="lb-tab active" onclick="switchLbTab(this,'all')">📊 总榜</button>
@@ -2181,7 +2204,37 @@ body::before {
       <button class="lb-tab" onclick="switchHistTab(this,'general')">📂 综合</button>
     </div>
     <div class="history-list" id="history-list"></div>
-  </div>
+    </div><!-- end profile-mine -->
+
+    <!-- GLOBAL LEADERBOARD -->
+    <div id="profile-global" style="display:none">
+      <div class="section-title" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">◈ 世界排行榜<button onclick="renderGlobalLeaderboard()" style="font-family:var(--pixel);font-size:7px;padding:4px 10px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">🔄 刷新</button></div>
+      <!-- Filter row: theme + difficulty -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+        <span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">主题：</span>
+        <div class="lb-tabs" id="global-theme-tabs" style="margin-bottom:0">
+          <button class="lb-tab active" onclick="switchGlobalTheme(this,'all')">全部</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'literature')">📚 文学</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'mystery')">🔍 推理</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'lightnovel')">✒️ 轻小说</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'movie')">🎬 电影</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'manga')">📖 漫画</button>
+          <button class="lb-tab" onclick="switchGlobalTheme(this,'general')">📂 综合</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">难度：</span>
+        <div class="lb-tabs" id="global-diff-tabs" style="margin-bottom:0">
+          <button class="lb-tab active" onclick="switchGlobalDiff(this,0)">全部</button>
+          <button class="lb-tab" onclick="switchGlobalDiff(this,6)">难度一</button>
+          <button class="lb-tab" onclick="switchGlobalDiff(this,9)">难度二</button>
+          <button class="lb-tab" onclick="switchGlobalDiff(this,12)">难度三</button>
+        </div>
+      </div>
+      <div id="global-lb-content"></div>
+    </div><!-- end profile-global -->
+
+  </div><!-- end profile-content -->
 </div>
 
 <!-- ===== MODALS ===== -->
@@ -2682,7 +2735,7 @@ const CHALLENGES = {
     '阅读一部历史题材漫画',
     '阅读一部奇幻题材漫画',
     '阅读一部悬疑推理漫画',
-    '阅读一部末世/末日题材漫画',
+    '阅读一部末世或末日题材漫画',
     '阅读一部时空穿越或轮回题材漫画',
     '阅读一部异世界题材漫画',
     '阅读一部少年向漫画',
@@ -2695,7 +2748,7 @@ const CHALLENGES = {
     '阅读一部后宫或逆后宫漫画',
     '阅读一部美漫',
     '阅读一部争议之作',
-    '阅读一部白毛角色的作品',
+    '阅读一部白毛角色的漫画',
     '阅读一部豆瓣9分以上的漫画',
     '阅读一部同人文化发达的漫画',
     '阅读一部名梗频出的漫画',
@@ -2703,14 +2756,15 @@ const CHALLENGES = {
     '阅读一部致郁系漫画',
     '阅读同一作者不同时期的两部漫画',
     '阅读一部夫妻合作的漫画',
-    '阅读一部手冢奖作品',
+    '阅读一部手冢奖漫画',
     '阅读一部昭和时代漫画',
     '阅读一部在Jump连载的漫画',
     '阅读一部「这部漫画真厉害」榜单的漫画',
-    '阅读一部平成黄金期作品',
-    '阅读一部2020年之后连载的新作',
+    '阅读一部平成黄金期漫画',
+    '阅读一部2020年之后连载的新作漫画',
     '阅读一部有改编真人版的漫画',
-    '阅读一部朋友推荐的让人哭的漫画',
+    '阅读一部你觉得CV很适合的漫画',
+    '阅读朋友推荐一部让所有人都哭的漫画',
     '阅读一部销量过亿的漫画',
     '阅读一部小众神作但知名度低的漫画',
     '阅读一部看过的人多但评分超低的漫画',
@@ -2724,15 +2778,13 @@ const CHALLENGES = {
     '阅读一部带有魔法元素的漫画',
     '阅读一部作者真实经历改编的漫画',
     '阅读一部以动物为主角的漫画',
-    '阅读一部短篇作品集漫画',
+    '阅读一部短篇漫画集',
     '阅读一部文学作品改编的漫画',
     '阅读一部国内原创漫画',
     '阅读一部彩色条漫',
     '阅读一部韩漫',
-    '阅读一部原作和作画为两人的漫画',
+    '阅读一部原作和作画为两人合作的漫画',
     '阅读一部智斗题材的漫画',
-    '阅读一部「我喜欢的CV请去配这个」的漫画',
-    '随意阅读一部你喜欢的漫画',
   ],
   general: [
     "阅读任意一篇您最近看过的文章，写下最让您印象深刻的观点",
@@ -2937,16 +2989,16 @@ function generateMap(size, seed) {
   }
   // empty = total - all others
 
-  // Try generating valid map up to 50000 times
-  for(let attempt = 0; attempt < 50000; attempt++) {
+  // Try generating valid map up to 200000 times
+  for(let attempt = 0; attempt < 200000; attempt++) {
     const grid = tryGenerate(size, counts, rand);
     if(grid) return { grid, counts };
   }
-  // Fallback: generate without strict hint validation
-  return { grid: tryGenerate(size, counts, rand, true), counts };
+  // Last resort: still enforce treasure neighbor rule
+  return { grid: tryGenerate(size, counts, rand), counts };
 }
 
-function tryGenerate(size, counts, rand, relaxed=false) {
+function tryGenerate(size, counts, rand) {
   const grid = [];
   const pool = [];
   for(let i=0; i<counts.treasure; i++) pool.push('treasure');
@@ -2970,18 +3022,26 @@ function tryGenerate(size, counts, rand, relaxed=false) {
     }
   }
 
-  // Validate: hints must have exactly 1 treasure neighbor
-  if(!relaxed) {
+  // Validate: hints must have exactly 1 treasure neighbor (ALWAYS enforced)
+  {
     for(let r=0;r<size;r++) {
       for(let c=0;c<size;c++) {
         if(grid[r][c].type === 'hint') {
           const neighbors = getNeighbors(r,c,size);
-          // Rule 1: exactly 1 treasure neighbor
+          // Must have exactly 1 treasure neighbor (never 0)
           const tCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='treasure').length;
           if(tCount !== 1) return null;
-          // Rule 2: no hint cell adjacent to another hint cell
+          // No hint adjacent to another hint
           const hCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='hint').length;
           if(hCount > 0) return null;
+        }
+        // Treasure must not be adjacent to another treasure (already enforced, keep)
+        if(grid[r][c].type === 'treasure') {
+          const neighbors = getNeighbors(r,c,size);
+          const tNeighbor = neighbors.some(([nr,nc]) => grid[nr][nc].type==='treasure');
+          if(tNeighbor) return null;
+          // Also verify: treasure must have at least one hint neighbor OR be findable
+          // (no extra constraint needed — hint points to treasure, not vice versa)
         }
         // Rule 3: bomb/firecracker must not be adjacent to each other
         if(grid[r][c].type === 'bomb' || grid[r][c].type === 'firecracker') {
@@ -3460,11 +3520,12 @@ function triggerBombExplosion(originEl) {
 
 function onAngel(r, c) {
   const { grid, size } = gameState;
-  // Find all treasure positions
+  // Only hint treasures NOT yet found (not revealed AND not eliminated)
   const treasures = [];
   for(let rr=0;rr<size;rr++) {
     for(let cc=0;cc<size;cc++) {
-      if(grid[rr][cc].type==='treasure' && !grid[rr][cc].revealed && !grid[rr][cc].eliminated) {
+      const cell = grid[rr][cc];
+      if(cell.type==='treasure' && !cell.revealed && !cell.eliminated) {
         treasures.push([rr,cc]);
       }
     }
@@ -4106,7 +4167,7 @@ function renderLeaderboard(filterTheme) {
     const rankCls = i===0?'lb-rank-1':i===1?'lb-rank-2':i===2?'lb-rank-3':'lb-rank-other';
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
     const d = new Date(r.date).toLocaleDateString('zh-CN');
-    const themeShow = filterTheme === 'all' ? `<span class="lb-theme-badge">${THEME_NAMES[r.theme]||r.theme}</span> ` : '';
+    const themeShow = filterTheme === 'all' ? `<span class="lb-theme-badge th-${r.theme||''}">${THEME_NAMES[r.theme]||r.theme}</span> ` : '';
     rows += `<tr>
       <td class="lb-rank ${rankCls}">${medal}</td>
       <td>${themeShow}${DIFF_LABEL[r.size]||r.size+'×'+r.size}</td>
@@ -4137,28 +4198,54 @@ function showRenameModal() {
   openModal('rename-overlay');
 }
 
-function confirmRename() {
+async function confirmRename() {
   const newName = document.getElementById('rename-input').value.trim().slice(0, 20);
   if(!newName) return;
   const current = currentUser.name;
+  if(newName === current) { closeModal('rename-overlay'); return; }
+
+  // Check local + Supabase for conflict
   const users = DB.users();
-  if(users[newName] && newName !== current) {
-    document.getElementById('rename-err').style.display = 'block';
-    return;
-  }
+  if(users[newName]) { document.getElementById('rename-err').style.display = 'block'; return; }
+  const sbExisting = await SB.getUser(newName);
+  if(sbExisting) { document.getElementById('rename-err').style.display = 'block'; return; }
+
+  // ── Update localStorage ──────────────────────────────────────────────────
   if(users[current]) {
-    users[newName] = { ...users[current] };
-    users[newName].renameCount = (users[newName].renameCount||0) + 1;
-    if(newName !== current) delete users[current];
+    users[newName] = { ...users[current], renameCount: (users[current].renameCount||0)+1 };
+    delete users[current];
     DB.saveUsers(users);
   }
+  // Migrate saves in localStorage
+  const saves = DB.saves();
+  if(saves[current]) { saves[newName] = saves[current]; delete saves[current]; DB.saveSaves(saves); }
+  // Migrate history in localStorage
+  const hist = DB.history();
+  hist.forEach(h => { if(h.user === current) h.user = newName; });
+  DB.saveHistory(hist);
+
+  // ── Update Supabase ──────────────────────────────────────────────────────
+  // 1. Rename user row
+  await sbFetch('PATCH', 'users', { name: newName }, 'name=eq.' + encodeURIComponent(current));
+  // 2. Migrate saves
+  await sbFetch('PATCH', 'saves', { user_name: newName }, 'user_name=eq.' + encodeURIComponent(current));
+  // 3. Migrate history
+  await sbFetch('PATCH', 'history', { user_name: newName }, 'user_name=eq.' + encodeURIComponent(current));
+  // 4. Migrate leaderboard (THIS is what was missing)
+  await sbFetch('PATCH', 'leaderboard', { user_name: newName }, 'user_name=eq.' + encodeURIComponent(current));
+
+  // ── Update UI ────────────────────────────────────────────────────────────
   currentUser.name = newName;
   document.getElementById('home-username').textContent = newName;
-  if(users[newName]) { users[newName].renameCount = (users[newName].renameCount||0)+1; DB.saveUsers(users); }
   const wn = document.getElementById('welcome-name');
   if(wn) { wn.textContent = newName + '侦探'; wn.style.color='#e8960a'; wn.style.fontWeight='bold'; }
   closeModal('rename-overlay');
   showProfile();
+  // Refresh world leaderboard after Supabase updates
+  setTimeout(() => {
+    const globalDiv = document.getElementById('profile-global');
+    if(globalDiv && globalDiv.style.display !== 'none') renderGlobalLeaderboard();
+  }, 1500);
 }
 
 
@@ -4222,6 +4309,73 @@ function updateLegendCounts() {
     const remaining = total - used;
     el.textContent = remaining > 0 ? '剩余 ' + remaining + '/' + total : '（已全部使用）';
   });
+}
+
+
+// ===================================
+// GLOBAL LEADERBOARD
+// ===================================
+let _globalTheme = 'all';
+let _globalDiff = 0;
+
+function switchProfileView(btn, view) {
+  document.querySelectorAll('#profile-view-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('profile-mine').style.display = view === 'mine' ? 'block' : 'none';
+  document.getElementById('profile-global').style.display = view === 'global' ? 'block' : 'none';
+  if(view === 'global') renderGlobalLeaderboard();
+}
+
+function switchGlobalTheme(btn, theme) {
+  document.querySelectorAll('#global-theme-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  _globalTheme = theme;
+  renderGlobalLeaderboard();
+}
+
+function switchGlobalDiff(btn, diff) {
+  document.querySelectorAll('#global-diff-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  _globalDiff = diff;
+  renderGlobalLeaderboard();
+}
+
+async function renderGlobalLeaderboard() {
+  const container = document.getElementById('global-lb-content');
+  container.innerHTML = '<div class="lb-empty">加载中...</div>';
+
+  let params = 'order=elapsed.asc&limit=100';
+  if(_globalTheme !== 'all') params += '&theme=eq.' + encodeURIComponent(_globalTheme);
+  if(_globalDiff > 0) params += '&size=eq.' + _globalDiff;
+
+  const records = await sbFetch('GET', 'leaderboard', null, params);
+  if(!records || records.length === 0) {
+    container.innerHTML = '<div class="lb-empty">暂无记录<br>快去通关上榜吧！</div>';
+    return;
+  }
+
+  const DIFF_LABEL = { 6:'难度一', 9:'难度二', 12:'难度三' };
+  let rows = '';
+  records.forEach((r, i) => {
+    const isSelf = currentUser && r.user_name === currentUser.name;
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+    const rankCls = i===0?'lb-rank-1':i===1?'lb-rank-2':i===2?'lb-rank-3':'lb-rank-other';
+    const d = new Date(r.date).toLocaleDateString('zh-CN');
+    const themeName = THEME_NAMES[r.theme] || r.theme;
+    rows += '<tr' + (isSelf?' class="glb-self"':'') + '>' +
+      '<td class="lb-rank ' + rankCls + '">' + medal + '</td>' +
+      '<td><span class="glb-avatar">' + (r.avatar||'🦊') + '</span></td>' +
+      '<td><span class="glb-name">' + r.user_name + (isSelf?' 👈':'') + '</span></td>' +
+      '<td><span class="lb-theme-badge th-' + (r.theme||'') + '">' + themeName + '</span> ' + (DIFF_LABEL[r.size]||'') + '</td>' +
+      '<td class="glb-time">⏱ ' + fmtTime(r.elapsed) + '</td>' +
+      '<td class="glb-meta">' + (r.challenges||0) + ' 个挑战</td>' +
+      '<td class="glb-meta">' + d + '</td>' +
+      '</tr>';
+  });
+
+  container.innerHTML = '<table class="lb-table"><thead><tr>' +
+    '<th>排名</th><th>头像</th><th>昵称</th><th>主题/难度</th><th>时间</th><th>挑战</th><th>日期</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ===================================
