@@ -1336,6 +1336,7 @@ body::before {
 }
 .lb-table tr:last-child td { border-bottom: none; }
 .lb-table tr:hover td { background: rgba(232,150,10,0.05); }
+.lb-row-clickable:hover td { background: rgba(124,92,191,0.08) !important; }
 .lb-rank {
   font-family: var(--pixel);
   font-size: 10px;
@@ -2332,8 +2333,14 @@ const SB = {
 // ===================================
 // DATA LAYER
 // ===================================
-const SHOVEL_IMG = '<span style="font-size:clamp(16px,2.5vw,22px);line-height:1;">🪏</span>';
-const SHOVEL_SMALL = '<span style="font-size:18px;vertical-align:middle;">🪏</span>';
+const SHOVEL_SVG = '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;background:var(--text2);color:#fff;font-family:var(--body);font-size:0.75em;font-weight:bold;border-radius:2px;vertical-align:middle;">铲</span>';
+// Try to use emoji, fall back to text icon
+const _shovelTest = document.createElement('canvas'); 
+const _ctx = _shovelTest.getContext && _shovelTest.getContext('2d');
+let _shovelEmoji = '🪏';
+if(_ctx) { _ctx.font = '20px sans-serif'; _ctx.fillText('🪏',0,20); const d=_ctx.getImageData(0,0,20,20).data; if(!d.some(v=>v>0)) _shovelEmoji = null; }
+const SHOVEL_IMG = _shovelEmoji ? `<span style="font-size:clamp(16px,2.5vw,22px);line-height:1;">${_shovelEmoji}</span>` : '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.4em;height:1.4em;background:var(--border2);color:var(--text);font-family:var(--body);font-size:0.8em;font-weight:bold;border-radius:2px;line-height:1;">铲</span>';
+const SHOVEL_SMALL = _shovelEmoji ? `<span style="font-size:18px;vertical-align:middle;">${_shovelEmoji}</span>` : '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--border2);color:var(--text);font-family:var(--body);font-size:11px;font-weight:bold;border-radius:2px;vertical-align:middle;line-height:1;">铲</span>';
 const YUANBAO_SMALL = '<span style="font-size:16px;">🌟</span>';
 const YUANBAO_IMG = '<span class="yuanbao-icon">🌟</span>';
 const DB = {
@@ -2920,6 +2927,48 @@ function loginUser(name, avatar) {
   document.getElementById('home-avatar').textContent = avatar;
   const wn = document.getElementById('welcome-name'); if(wn) { wn.textContent = name + '侦探'; wn.style.color='#e8960a'; wn.style.fontWeight='bold'; }
   showScreen('home-screen');
+  // Check for unfinished auto-saved game
+  checkAutoResume();
+}
+
+async function checkAutoResume() {
+  if(!currentUser) return;
+  // Look for most recent non-won save in localStorage
+  const saves = DB.saves();
+  const userSaves = saves[currentUser.name] || {};
+  let latest = null;
+  Object.values(userSaves).forEach(s => {
+    if(!s.won && s.savedAt && (!latest || s.savedAt > latest.savedAt)) latest = s;
+  });
+  if(!latest) return;
+  // Show resume toast
+  const mins = String(Math.floor((latest.elapsed||0)/60)).padStart(2,'0');
+  const secs = String((latest.elapsed||0)%60).padStart(2,'0');
+  const themeName = (window.THEME_NAMES||{})[latest.theme] || latest.theme;
+  showResumePrompt(latest, `${themeName} · ${mins}:${secs}`);
+}
+
+function showResumePrompt(saveData, label) {
+  // Remove existing prompt if any
+  const existing = document.getElementById('resume-prompt');
+  if(existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'resume-prompt';
+  div.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card);border:2px solid var(--purple);border-radius:4px;padding:12px 18px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:9999;display:flex;align-items:center;gap:12px;font-family:var(--pixel);font-size:8px;max-width:90vw;';
+  div.innerHTML = `<span style="color:var(--purple);">💾 上次未完成：${label}</span>
+    <button onclick="resumeAutoSave()" style="font-family:var(--pixel);font-size:7px;padding:5px 10px;background:var(--purple);color:#fff;border:none;cursor:pointer;border-radius:2px;">继续</button>
+    <button onclick="document.getElementById('resume-prompt').remove()" style="font-family:var(--pixel);font-size:7px;padding:5px 10px;background:transparent;color:var(--text3);border:1px solid var(--border);cursor:pointer;border-radius:2px;">忽略</button>`;
+  div.dataset.saveJson = JSON.stringify(saveData);
+  document.body.appendChild(div);
+  setTimeout(() => { if(div.parentNode) div.remove(); }, 12000);
+}
+
+function resumeAutoSave() {
+  const div = document.getElementById('resume-prompt');
+  if(!div) return;
+  const s = JSON.parse(div.dataset.saveJson);
+  div.remove();
+  loadGameData(s);
 }
 
 function doLogout() {
@@ -2942,6 +2991,8 @@ function showScreen(id) {
 function goHome() {
   stopTimer();
   closeAllModals();
+  const banner = document.getElementById('win-banner');
+  if(banner) banner.remove();
   showScreen('home-screen');
 }
 
@@ -3348,6 +3399,7 @@ function confirmReveal() {
 function revealCell(r, c) {
   const { grid, size } = gameState;
   const cell = grid[r][c];
+  if(gameState.won) return; // map locked after win
   if(cell.eliminated) return;
   // Challenge cells: show modal even if already revealed (allow re-open for draft)
   if(cell.type === 'challenge') {
@@ -3356,6 +3408,11 @@ function revealCell(r, c) {
       return;
     }
     return; // already completed
+  }
+  // Angel cells: allow re-click to show saved hint
+  if(cell.type === 'angel' && cell.revealed) {
+    onAngel(r, c);
+    return;
   }
   if(cell.revealed) return;
   
@@ -3559,27 +3616,36 @@ function triggerBombExplosion(originEl) {
 
 function onAngel(r, c) {
   const { grid, size } = gameState;
+  const cell = grid[r][c];
+  // If already revealed and hint saved, show the same hint again
+  if(cell.angelHint) {
+    document.getElementById('angel-msg').textContent = cell.angelHint;
+    openModal('angel-overlay');
+    return;
+  }
   // Only hint treasures NOT yet found (not revealed AND not eliminated)
   const treasures = [];
   for(let rr=0;rr<size;rr++) {
     for(let cc=0;cc<size;cc++) {
-      const cell = grid[rr][cc];
-      if(cell.type==='treasure' && !cell.revealed && !cell.eliminated) {
+      const c2 = grid[rr][cc];
+      if(c2.type==='treasure' && !c2.revealed && !c2.eliminated) {
         treasures.push([rr,cc]);
       }
     }
   }
   
+  let hint;
   if(treasures.length === 0) {
-    document.getElementById('angel-msg').textContent = '所有宝物都已被找到了！真厉害！';
+    hint = '所有宝物都已被找到了！真厉害！';
   } else {
     const [tr, tc] = treasures[Math.floor(Math.random()*treasures.length)];
     const useRow = Math.random() < 0.5;
-    const hint = useRow
+    hint = useRow
       ? `小天使悄悄告诉你：有一个宝物藏在第 ${tr+1} 行哦！✨`
       : `小天使悄悄告诉你：有一个宝物藏在第 ${COL_LABELS[tc]} 列哦！✨`;
-    document.getElementById('angel-msg').textContent = hint;
   }
+  cell.angelHint = hint; // save for re-viewing
+  document.getElementById('angel-msg').textContent = hint;
   openModal('angel-overlay');
 }
 
@@ -3596,6 +3662,11 @@ function onChallenge(r, c) {
   document.getElementById('challenge-label').textContent = isMovie ? '提交您的观后感（至少20字）：' : '提交您的读后感（至少20字）：';
   document.getElementById('challenge-submit-btn').textContent = isMovie ? '✓ 提交观后感' : '✓ 提交读后感';
   document.getElementById('review-input').placeholder = isMovie ? '写下您的观影感受...' : '写下您的阅读感受...';
+  // Update book title label for movie theme
+  const bookLabel = document.getElementById('book-title-input');
+  if(bookLabel) { bookLabel.value = ''; bookLabel.placeholder = isMovie ? '片名...' : '书名/片名...'; }
+  const reviewLabelEl = document.getElementById('review-label-text');
+  if(reviewLabelEl) reviewLabelEl.textContent = isMovie ? '✏ 观后感' : '✏ 读后感';
   document.getElementById('challenge-err').style.display = 'none';
   const tipEl = document.getElementById('challenge-draft-tip'); if(tipEl) tipEl.classList.remove('show');
 
@@ -3618,11 +3689,13 @@ function updateCharCount() {
 }
 
 function submitChallenge() {
-  const review = document.getElementById('review-input').value.trim();
-  if(review.length < 20) {
+  const reviewRaw = document.getElementById('review-input').value.trim();
+  const bookTitle = (document.getElementById('book-title-input')?.value||'').trim();
+  if(reviewRaw.length < 20) {
     document.getElementById('challenge-err').style.display = 'block';
     return;
   }
+  const review = bookTitle ? `《${bookTitle}》${reviewRaw}` : reviewRaw;
   document.getElementById('challenge-err').style.display = 'none';
   closeModal('challenge-overlay');
   
@@ -3695,6 +3768,60 @@ function saveDraft() {
 // ===================================
 // WIN
 // ===================================
+function replayWinMap(recordId) {
+  const snapKey = 'xunbao_snap_' + currentUser.name + '_' + recordId;
+  const raw = localStorage.getItem(snapKey);
+  if(!raw) { showToast('该记录的地图快照不存在（旧记录无法回放）'); return; }
+  const snap = JSON.parse(raw);
+  gameState = {
+    theme: snap.theme, size: snap.size, seed: snap.seed, grid: snap.grid,
+    treasureGoal: snap.size===6?3:snap.size===9?6:10,
+    treasureFound: snap.grid.flat().filter(c=>c.type==='treasure'&&c.revealed).length,
+    startTime: Date.now(), elapsed: snap.elapsed,
+    completedChallenges: [], revealedCount: snap.grid.flat().filter(c=>c.revealed||c.eliminated).length,
+    won: true
+  };
+  document.getElementById('game-title').textContent = THEME_NAMES[snap.theme] + ' 冒险';
+  document.getElementById('game-screen').dataset.theme = snap.theme;
+  document.getElementById('treasure-count').textContent = gameState.treasureFound;
+  document.getElementById('treasure-goal').textContent = snap.size===6?'3':snap.size===9?'6':'10';
+  const doneCount = snap.grid.flat().filter(c=>c.challengeDone).length;
+  document.getElementById('challenge-stepped').textContent = doneCount;
+  document.getElementById('challenge-total').textContent = snap.grid.flat().filter(c=>c.type==='challenge').length;
+  document.getElementById('game-timer').textContent = fmtTime(snap.elapsed);
+  currentScale = 1;
+  document.getElementById('zoom-val').textContent = '100%';
+  renderMap();
+  showScreen('game-screen');
+  setupMapInteraction();
+  setTimeout(updateLegendCounts, 100);
+  // Show win banner
+  const header = document.querySelector('#game-screen .game-header');
+  const existing = document.getElementById('win-banner');
+  if(existing) existing.remove();
+  if(header) {
+    const banner = document.createElement('div');
+    banner.id = 'win-banner';
+    banner.style.cssText = 'background:rgba(200,168,64,0.15);border-bottom:2px solid var(--gold);padding:6px 16px;font-family:var(--pixel);font-size:7px;color:var(--gold);text-align:center;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;';
+    banner.innerHTML = '🏆 任务完成！地图已锁定 <span style="display:flex;gap:8px;"><button onclick="goHome()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">返回主页</button><button onclick="showProfile()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">查看记录</button></span>';
+    header.insertAdjacentElement('afterend', banner);
+  }
+}
+
+function closeWinStayOnMap() {
+  closeModal('win-overlay');
+  // Lock the map — show a non-intrusive banner
+  gameState.won = true;
+  const header = document.querySelector('#game-screen .game-header');
+  if(header && !document.getElementById('win-banner')) {
+    const banner = document.createElement('div');
+    banner.id = 'win-banner';
+    banner.style.cssText = 'background:rgba(200,168,64,0.15);border-bottom:2px solid var(--gold);padding:6px 16px;font-family:var(--pixel);font-size:7px;color:var(--gold);text-align:center;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;';
+    banner.innerHTML = '🏆 任务完成！地图已锁定 <span style="display:flex;gap:8px;"><button onclick="goHome()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">返回主页</button><button onclick="showProfile()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">查看记录</button></span>';
+    header.insertAdjacentElement('afterend', banner);
+  }
+}
+
 function showWin() {
   stopTimer();
   const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
@@ -3725,11 +3852,16 @@ function saveWinRecord(elapsed) {
   const key = 'leaderboard_' + currentUser.name;
   let records = JSON.parse(localStorage.getItem('xunbao_' + key) || '[]');
   const challenges = gameState.grid ? gameState.grid.flat().filter(c=>c.challengeDone).length : 0;
-  const record = { theme: gameState.theme, size: gameState.size, elapsed, challenges, date: Date.now() };
+  const recordId = Date.now();
+  const record = { theme: gameState.theme, size: gameState.size, elapsed, challenges, date: recordId, id: recordId };
   records.push(record);
   localStorage.setItem('xunbao_' + key, JSON.stringify(records));
+  // Save grid snapshot for map replay
+  const snapKey = 'xunbao_snap_' + currentUser.name + '_' + recordId;
+  const snap = { theme: gameState.theme, size: gameState.size, seed: gameState.seed, grid: gameState.grid, elapsed, challenges, date: recordId };
+  try { localStorage.setItem(snapKey, JSON.stringify(snap)); } catch(e) {}
   // Also save to Supabase for global leaderboard
-  SB.addLeaderboard(currentUser.name, currentUser.avatar, gameState.theme, gameState.size, elapsed, challenges, record.date);
+  SB.addLeaderboard(currentUser.name, currentUser.avatar, gameState.theme, gameState.size, elapsed, challenges, recordId);
 }
 
 function getWinRecords() {
@@ -3922,9 +4054,19 @@ function playGoldRain() {
 // ZOOM & PAN
 // ===================================
 function zoomMap(delta) {
-  currentScale = Math.max(0.5, Math.min(2.5, currentScale+delta));
-  document.getElementById('mapWrapper').style.transform = `scale(${currentScale})`;
-  document.getElementById('zoom-val').textContent = Math.round(currentScale*100)+'%';
+  const container = document.getElementById('mapContainer');
+  const wrapper = document.getElementById('mapWrapper');
+  // Record center of current visible area before zoom
+  const cx = container.scrollLeft + container.clientWidth / 2;
+  const cy = container.scrollTop + container.clientHeight / 2;
+  const oldScale = currentScale;
+  currentScale = Math.max(0.5, Math.min(2.5, currentScale + delta));
+  wrapper.style.transform = `scale(${currentScale})`;
+  document.getElementById('zoom-val').textContent = Math.round(currentScale * 100) + '%';
+  // Adjust scroll so the same point stays centered
+  const ratio = currentScale / oldScale;
+  container.scrollLeft = cx * ratio - container.clientWidth / 2;
+  container.scrollTop = cy * ratio - container.clientHeight / 2;
 }
 
 function setupMapInteraction() {
@@ -3948,10 +4090,19 @@ function setupMapInteraction() {
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      const scale = Math.max(0.5, Math.min(2.5, pinchStartScale * (dist / pinchStartDist)));
-      currentScale = scale;
-      document.getElementById('mapWrapper').style.transform = `scale(${scale})`;
-      document.getElementById('zoom-val').textContent = Math.round(scale * 100) + '%';
+      const newScale = Math.max(0.5, Math.min(2.5, pinchStartScale * (dist / pinchStartDist)));
+      // Keep pinch midpoint centered
+      const rect = container.getBoundingClientRect();
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      const cx = container.scrollLeft + midX;
+      const cy = container.scrollTop + midY;
+      const ratio = newScale / currentScale;
+      currentScale = newScale;
+      document.getElementById('mapWrapper').style.transform = `scale(${newScale})`;
+      document.getElementById('zoom-val').textContent = Math.round(newScale * 100) + '%';
+      container.scrollLeft = cx * ratio - midX;
+      container.scrollTop = cy * ratio - midY;
     }
   }, { passive: false });
 }
@@ -3974,6 +4125,7 @@ async function saveGame(exitAfter=false) {
     completedChallenges: gameState.completedChallenges,
     revealedCount: gameState.revealedCount,
     pendingDraftCell: gameState.pendingDraftCell || null,
+    won: gameState.won || false,
     savedAt
   };
   // Save to Supabase (upsert) and localStorage as backup
@@ -4300,12 +4452,17 @@ async function renderLeaderboard(filterTheme, filterDiff=0) {
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
     const d = new Date(r.date).toLocaleDateString('zh-CN');
     const themeShow = filterTheme === 'all' ? `<span class="lb-theme-badge th-${r.theme||''}">${THEME_NAMES[r.theme]||r.theme}</span> ` : '';
-    rows += `<tr>
+    const snapId = r.id || r.date;
+    const hasSnap = !!localStorage.getItem('xunbao_snap_' + currentUser.name + '_' + snapId);
+    const rowStyle = hasSnap ? 'cursor:pointer;' : '';
+    const rowTitle = hasSnap ? 'title="点击查看地图"' : '';
+    const rowClick = hasSnap ? `onclick="replayWinMap(${snapId})"` : '';
+    rows += `<tr style="${rowStyle}" ${rowTitle} ${rowClick} class="${hasSnap?'lb-row-clickable':''}">
       <td class="lb-rank ${rankCls}">${medal}</td>
       <td>${themeShow}<span style="font-size:9px;color:var(--text3);">${DIFF_LABEL[r.size]||r.size+'×'+r.size}</span></td>
       <td class="glb-time">⏱ ${fmtTime(r.elapsed)}</td>
       <td style="text-align:center;font-family:var(--pixel);font-size:8px;color:var(--text2);">${r.challenges||0}</td>
-      <td style="font-family:var(--pixel);font-size:8px;color:var(--text2);">${d}</td>
+      <td style="font-family:var(--pixel);font-size:8px;color:var(--text2);">${d}${hasSnap?'<br><span style="font-size:6px;color:var(--purple);font-family:var(--pixel);">▶ 查看地图</span>':''}</td>
     </tr>`;
   });
 
@@ -4570,7 +4727,14 @@ document.getElementById('reg-pass').addEventListener('keydown', e => { if(e.key=
 document.querySelectorAll('.avatar-opt').forEach(opt => {
   if(!opt.classList.contains('av-animals')) opt.classList.add('hidden-av');
 });
-// Update switchAvatarTab to handle all 6 categories
+
+// Replace 🪏 in static HTML if emoji not supported on this device
+if(!_shovelEmoji) {
+  const shovelFallback = '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;background:var(--border2);color:var(--text);font-family:var(--body);font-size:0.8em;font-weight:bold;border-radius:2px;line-height:1;vertical-align:middle;">铲</span>';
+  document.querySelectorAll('.gli, .skill-row-icon, .diff-chip').forEach(el => {
+    if(el.textContent.includes('🪏')) el.innerHTML = el.innerHTML.replace(/🪏/g, shovelFallback);
+  });
+}
 
 
 
@@ -4693,8 +4857,15 @@ document.querySelectorAll('.avatar-opt').forEach(opt => {
         <div class="challenge-tag" id="challenge-theme-tag">文学</div>
         <div id="challenge-task-text">请完成以下挑战任务...</div>
       </div>
-      <div class="form-label" style="margin-bottom:8px" id="challenge-label">提交您的读后感（至少20字）：</div>
-      <textarea class="review-input" id="review-input" placeholder="写下您的阅读感受..." oninput="updateCharCount()"></textarea>
+      <div class="form-label" style="margin-bottom:6px" id="challenge-label">提交您的读后感（至少20字）：</div>
+      <div style="margin-bottom:8px;">
+        <div style="font-family:var(--pixel);font-size:7px;color:var(--text3);margin-bottom:4px;">📖 作品名 <span style="font-weight:normal;opacity:0.7;">（不需要加书名号）</span></div>
+        <input type="text" id="book-title-input" class="form-input" style="font-size:13px;padding:8px 10px;" placeholder="书名/片名...">
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="font-family:var(--pixel);font-size:7px;color:var(--text3);margin-bottom:4px;" id="review-label-text">✏ 读后感</div>
+        <textarea class="review-input" id="review-input" style="margin-top:0;" placeholder="写下您的阅读感受..." oninput="updateCharCount()"></textarea>
+      </div>
       <div class="char-count" id="char-count">0 / 20</div>
       <div class="err-msg" id="challenge-err" style="display:none">请输入至少20个字符</div>
     </div>
@@ -4718,7 +4889,8 @@ document.querySelectorAll('.avatar-opt').forEach(opt => {
     </div>
     <div class="modal-footer" style="justify-content:center; gap:12px">
       <button class="btn btn-ghost" onclick="closeModal('win-overlay'); goHome()">返回主页</button>
-      <button class="btn btn-primary" style="width:auto" onclick="closeModal('win-overlay'); showProfile()">查看记录</button>
+      <button class="btn btn-ghost" onclick="closeModal('win-overlay'); showProfile()">查看记录</button>
+      <button class="btn btn-primary" style="width:auto" onclick="closeWinStayOnMap()">✓ 确认</button>
     </div>
   </div>
 </div>
