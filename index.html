@@ -1323,13 +1323,13 @@ body::before {
   font-size: 7px;
   color: var(--text3);
   background: var(--bg2);
-  padding: 8px 12px;
+  padding: 6px 5px;
   text-align: left;
   border-bottom: 2px solid var(--border);
   white-space: nowrap;
 }
 .lb-table td {
-  padding: 8px 12px;
+  padding: 6px 5px;
   border-bottom: 1px solid var(--border);
   color: var(--text2);
   vertical-align: middle;
@@ -1524,10 +1524,10 @@ body::before {
 .gln-wrap .gln { display: block; }
 
 
-.glb-avatar { font-size: 20px; }
+.glb-avatar { font-size: 16px; }
 .glb-name { font-family: var(--pixel); font-size: 8px; color: var(--text); }
 .glb-meta { font-size: 11px; color: var(--text2); }
-.glb-time { font-family: var(--pixel); font-size: 8px; color: #e8960a; }
+.glb-time { font-family: var(--pixel); font-size: 7px; color: #e8960a; }
 .glb-self { background: rgba(232,150,10,0.08) !important; }
 
 
@@ -2011,6 +2011,7 @@ body::before {
   </div>
   
   <div class="home-content">
+    <div style="background:rgba(192,72,64,0.08);border:2px solid rgba(192,72,64,0.5);border-radius:3px;padding:10px 16px;margin-bottom:12px;text-align:center;font-family:var(--body);font-size:13px;font-weight:bold;color:#c04840;line-height:1.6;">⚠️ 此版本为试运行版本，正式上线时，所有试运行期间的用户数据都会被清除</div>
     <div class="welcome-msg">你好，<span id="welcome-name" style="color:#e8960a;font-weight:bold;">侦探</span>，欢迎来到寻找黄金宝物的挑战。<br>请选择主题地图，开启寻宝之旅吧！<br><span style="opacity:0.85;font-size:0.9em"><span class="welcome-star">★</span> 我为你在地图提前埋下了道具，预祝寻宝愉快。<span class="welcome-star">★</span></span></div>
     <div class="section-title">◈ 选择主题开始冒险</div>
     <div class="themes-grid">
@@ -4473,21 +4474,23 @@ async function renderGlobalLeaderboard() {
     const isSelf = currentUser && r.user_name === currentUser.name;
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
     const rankCls = i===0?'lb-rank-1':i===1?'lb-rank-2':i===2?'lb-rank-3':'lb-rank-other';
-    const d = new Date(r.date).toLocaleDateString('zh-CN');
+    const dd = new Date(r.date);
+    const dateHtml = '<div style="font-family:var(--pixel);font-size:7px;color:var(--text2);text-align:center;line-height:1.8;">' +
+      dd.getFullYear() + '<br>' + (dd.getMonth()+1) + '<br>' + dd.getDate() + '</div>';
     const themeName = THEME_NAMES[r.theme] || r.theme;
     rows += '<tr' + (isSelf?' class="glb-self"':'') + '>' +
-      '<td class="lb-rank ' + rankCls + '">' + medal + '</td>' +
-      '<td><span class="glb-avatar">' + (r.avatar||'🦊') + '</span></td>' +
-      '<td><span class="glb-name">' + r.user_name + (isSelf?' 👈':'') + '</span></td>' +
-      '<td><span class="lb-theme-badge th-' + (r.theme||'') + '">' + themeName + '</span><br><span style="font-size:9px;color:var(--text3);">' + (DIFF_LABEL[r.size]||'') + '</span></td>' +
-      '<td class="glb-time">⏱ ' + fmtTime(r.elapsed) + '</td>' +
+      '<td class="lb-rank ' + rankCls + '" style="padding-left:4px;">' + medal + '</td>' +
+      '<td style="padding-left:3px;padding-right:2px;"><span class="glb-avatar">' + (r.avatar||'🦊') + '</span></td>' +
+      '<td style="padding-left:3px;"><span class="glb-name">' + r.user_name + (isSelf?' 👈':'') + '</span></td>' +
+      '<td style="padding-left:3px;"><span class="lb-theme-badge th-' + (r.theme||'') + '">' + themeName + '</span><br><span style="font-size:8px;color:var(--text3);font-family:var(--pixel);">' + (DIFF_LABEL[r.size]||'') + '</span></td>' +
+      '<td class="glb-time" style="white-space:nowrap;">⏱ ' + fmtTime(r.elapsed) + '</td>' +
       '<td style="text-align:center;font-family:var(--pixel);font-size:8px;color:var(--text2);">' + (r.challenges||0) + '</td>' +
-      '<td style="font-family:var(--pixel);font-size:8px;color:var(--text2);">' + d + '</td>' +
+      '<td>' + dateHtml + '</td>' +
       '</tr>';
   });
 
   container.innerHTML = '<table class="lb-table"><thead><tr>' +
-    '<th>排名</th><th>头像</th><th>昵称</th><th>主题/难度</th><th>用时</th><th style="text-align:center;">挑战数</th><th>日期</th>' +
+    '<th>排名</th><th>头像</th><th>昵称</th><th>主题/难度</th><th>用时</th><th style="text-align:center;">挑战数</th><th style="text-align:center;">日期</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
