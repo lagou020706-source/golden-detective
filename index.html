@@ -2004,7 +2004,7 @@ body::before {
         <button class="topbar-btn-icon" onclick="doLogout()"><span class="tbtn-icon">🚪</span><span class="tbtn-label">退出</span></button>
       </div>
       <div class="user-avatar-wrap">
-        <div class="user-avatar" id="home-avatar">🦊</div>
+        <div class="user-avatar" id="home-avatar" onclick="showProfile()" style="cursor:pointer;">🦊</div>
         <div class="user-name" id="home-username">冒险者</div>
       </div>
     </div>
@@ -2182,15 +2182,27 @@ body::before {
 
     <!-- MY SCORES -->
     <div id="profile-mine">
-    <div class="section-title" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">◈ 我的最佳成绩<button onclick="renderLeaderboard('all')" style="font-family:var(--pixel);font-size:7px;padding:4px 10px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">🔄 刷新</button></div>
-    <div class="lb-tabs" id="lb-tabs">
-      <button class="lb-tab active" onclick="switchLbTab(this,'all')">📊 总榜</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'literature')">📚 文学</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'mystery')">🔍 推理</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'lightnovel')">✒️ 轻小说</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'movie')">🎬 电影</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'manga')">📖 漫画</button>
-      <button class="lb-tab" onclick="switchLbTab(this,'general')">📂 综合</button>
+    <div class="section-title" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">◈ 我的最佳成绩<button onclick="renderLeaderboard(_myLbTheme, _myLbDiff)" style="font-family:var(--pixel);font-size:7px;padding:4px 10px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">🔄 刷新</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+      <span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">主题：</span>
+      <div class="lb-tabs" id="lb-tabs" style="margin-bottom:0">
+        <button class="lb-tab active" onclick="switchLbTab(this,'all')">📊 总榜</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'literature')">📚 文学</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'mystery')">🔍 推理</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'lightnovel')">✒️ 轻小说</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'movie')">🎬 电影</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'manga')">📖 漫画</button>
+        <button class="lb-tab" onclick="switchLbTab(this,'general')">📂 综合</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <span style="font-family:var(--pixel);font-size:7px;color:var(--text3)">难度：</span>
+      <div class="lb-tabs" id="lb-diff-tabs" style="margin-bottom:0">
+        <button class="lb-tab active" onclick="switchLbDiff(this,0)">全部</button>
+        <button class="lb-tab" onclick="switchLbDiff(this,6)">难度一</button>
+        <button class="lb-tab" onclick="switchLbDiff(this,9)">难度二</button>
+        <button class="lb-tab" onclick="switchLbDiff(this,12)">难度三</button>
+      </div>
     </div>
     <div id="lb-content" style="margin-bottom:28px"></div>
 
@@ -2988,18 +3000,23 @@ function generateMap(size, seed) {
     // 12x12 = 144
     counts = { treasure:10, hint:10, firecracker:7, bomb:7, angel:7, challenge:103 };
   }
-  // empty = total - all others
 
-  // Try generating valid map up to 200000 times
-  for(let attempt = 0; attempt < 200000; attempt++) {
-    const grid = tryGenerate(size, counts, rand);
+  // Try strict rules first
+  for(let attempt = 0; attempt < 300000; attempt++) {
+    const grid = tryGenerate(size, counts, rand, false);
     if(grid) return { grid, counts };
   }
-  // Last resort: still enforce treasure neighbor rule
-  return { grid: tryGenerate(size, counts, rand), counts };
+  // Fallback: relaxed rules (drop bomb/firecracker adjacency constraint)
+  for(let attempt = 0; attempt < 100000; attempt++) {
+    const grid = tryGenerate(size, counts, rand, true);
+    if(grid) return { grid, counts };
+  }
+  // Last resort: force generate ignoring all constraints except basic fill
+  const grid = tryGenerateForced(size, counts, rand);
+  return { grid, counts };
 }
 
-function tryGenerate(size, counts, rand) {
+function tryGenerate(size, counts, rand, relaxed=false) {
   const grid = [];
   const pool = [];
   for(let i=0; i<counts.treasure; i++) pool.push('treasure');
@@ -3023,45 +3040,66 @@ function tryGenerate(size, counts, rand) {
     }
   }
 
-  // Validate: hints must have exactly 1 treasure neighbor (ALWAYS enforced)
-  {
-    for(let r=0;r<size;r++) {
-      for(let c=0;c<size;c++) {
-        if(grid[r][c].type === 'hint') {
-          const neighbors = getNeighbors(r,c,size);
-          // Must have exactly 1 treasure neighbor (never 0)
-          const tCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='treasure').length;
-          if(tCount !== 1) return null;
-          // No hint adjacent to another hint
-          const hCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='hint').length;
-          if(hCount > 0) return null;
-        }
-        // Treasure must not be adjacent to another treasure (already enforced, keep)
-        if(grid[r][c].type === 'treasure') {
-          const neighbors = getNeighbors(r,c,size);
-          const tNeighbor = neighbors.some(([nr,nc]) => grid[nr][nc].type==='treasure');
-          if(tNeighbor) return null;
-          // Also verify: treasure must have at least one hint neighbor OR be findable
-          // (no extra constraint needed — hint points to treasure, not vice versa)
-        }
-        // Rule 3: bomb/firecracker must not be adjacent to each other
-        if(grid[r][c].type === 'bomb' || grid[r][c].type === 'firecracker') {
-          const neighbors = getNeighbors(r,c,size);
-          const explosiveNeighbor = neighbors.some(([nr,nc]) =>
-            grid[nr][nc].type==='bomb' || grid[nr][nc].type==='firecracker'
-          );
-          if(explosiveNeighbor) return null;
-        }
-        // Rule 4: treasure cells should not be adjacent to each other
-        if(grid[r][c].type === 'treasure') {
-          const neighbors = getNeighbors(r,c,size);
-          const tNeighbor = neighbors.some(([nr,nc]) => grid[nr][nc].type==='treasure');
-          if(tNeighbor) return null;
-        }
+  // Validate rules
+  for(let r=0;r<size;r++) {
+    for(let c=0;c<size;c++) {
+      const neighbors = getNeighbors(r,c,size);
+      if(grid[r][c].type === 'hint') {
+        const tCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='treasure').length;
+        if(tCount !== 1) return null;
+        const hCount = neighbors.filter(([nr,nc])=>grid[nr][nc].type==='hint').length;
+        if(hCount > 0) return null;
+      }
+      if(grid[r][c].type === 'treasure') {
+        const tNeighbor = neighbors.some(([nr,nc]) => grid[nr][nc].type==='treasure');
+        if(tNeighbor) return null;
+      }
+      if(!relaxed && (grid[r][c].type === 'bomb' || grid[r][c].type === 'firecracker')) {
+        const explosiveNeighbor = neighbors.some(([nr,nc]) =>
+          grid[nr][nc].type==='bomb' || grid[nr][nc].type==='firecracker'
+        );
+        if(explosiveNeighbor) return null;
       }
     }
   }
 
+  return grid;
+}
+
+function tryGenerateForced(size, counts, rand) {
+  // Place items with minimal constraints: only treasure non-adjacency and hint→treasure
+  const grid = [];
+  for(let r=0;r<size;r++) { grid.push([]); for(let c=0;c<size;c++) grid[r].push({type:'challenge',revealed:false,eliminated:false}); }
+  
+  const cells = [];
+  for(let r=0;r<size;r++) for(let c=0;c<size;c++) cells.push([r,c]);
+  for(let i=cells.length-1;i>0;i--) { const j=Math.floor(rand()*cells.length); [cells[i],cells[j]]=[cells[j],cells[i]]; }
+  
+  let ci = 0;
+  // Place treasures (non-adjacent)
+  const treasurePos = [];
+  for(let t=0; t<counts.treasure && ci<cells.length; ci++) {
+    const [r,c] = cells[ci];
+    const adj = getNeighbors(r,c,size).some(([nr,nc])=>grid[nr][nc].type==='treasure');
+    if(!adj) { grid[r][c].type='treasure'; treasurePos.push([r,c]); t++; }
+  }
+  // Place hints adjacent to exactly one treasure
+  let hPlaced = 0;
+  for(const [tr,tc] of treasurePos) {
+    if(hPlaced >= counts.hint) break;
+    const nb = getNeighbors(tr,tc,size).filter(([nr,nc])=>grid[nr][nc].type==='challenge');
+    if(nb.length>0) { const [nr,nc]=nb[Math.floor(rand()*nb.length)]; grid[nr][nc].type='hint'; hPlaced++; }
+  }
+  // Place remaining specials
+  let bombs=0,fires=0,angels=0;
+  for(;ci<cells.length;ci++) {
+    const [r,c]=cells[ci];
+    if(grid[r][c].type!=='challenge') continue;
+    if(bombs<counts.bomb){grid[r][c].type='bomb';bombs++;}
+    else if(fires<counts.firecracker){grid[r][c].type='firecracker';fires++;}
+    else if(angels<counts.angel){grid[r][c].type='angel';angels++;}
+    else break;
+  }
   return grid;
 }
 
@@ -4088,8 +4126,11 @@ function showProfile() {
     }
   });
   
-  // Render personal leaderboard
-  renderLeaderboard('all');
+  // Render personal leaderboard - reset filters
+  _myLbTheme = 'all'; _myLbDiff = 0;
+  document.querySelectorAll('#lb-tabs .lb-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('#lb-diff-tabs .lb-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  renderLeaderboard('all', 0);
 
   // Load history - render local data immediately (so recent challenges always show),
   // then fetch Supabase and merge in records from other devices
@@ -4202,10 +4243,21 @@ function loadGameData(s) {
 // ===================================
 // PERSONAL LEADERBOARD
 // ===================================
+let _myLbTheme = 'all';
+let _myLbDiff = 0;
+
 function switchLbTab(btn, theme) {
-  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#lb-tabs .lb-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  renderLeaderboard(theme);
+  _myLbTheme = theme;
+  renderLeaderboard(_myLbTheme, _myLbDiff);
+}
+
+function switchLbDiff(btn, diff) {
+  document.querySelectorAll('#lb-diff-tabs .lb-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  _myLbDiff = diff;
+  renderLeaderboard(_myLbTheme, _myLbDiff);
 }
 
 function fmtTime(secs) {
@@ -4214,14 +4266,15 @@ function fmtTime(secs) {
   return m + ':' + s;
 }
 
-async function renderLeaderboard(filterTheme) {
+async function renderLeaderboard(filterTheme, filterDiff=0) {
   const container = document.getElementById('lb-content');
   if(!container) return;
   container.innerHTML = '<div class="lb-empty" style="padding:16px">加载中...</div>';
   const records = await getWinRecordsAsync();
 
-  // Filter by theme
+  // Filter by theme then difficulty
   let filtered = filterTheme === 'all' ? [...records] : records.filter(r => r.theme === filterTheme);
+  if(filterDiff > 0) filtered = filtered.filter(r => r.size === filterDiff);
 
   if(filtered.length === 0) {
     container.innerHTML = '<div class="lb-empty">还没有通关记录<br>完成一局游戏后成绩将显示在这里</div>';
