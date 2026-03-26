@@ -3451,6 +3451,8 @@ function onHint(r, c) {
 }
 
 function onFirecracker(r, c) {
+  gameState.pendingBomb = { r, c, type: 'firecracker' };
+  saveGame();
   const dirs = [
     { label:'横向（整行）', icon:'↔️', dir:'row' },
     { label:'纵向（整列）', icon:'↕️', dir:'col' },
@@ -3463,7 +3465,7 @@ function onFirecracker(r, c) {
     const btn = document.createElement('button');
     btn.className = 'dir-btn';
     btn.innerHTML = `<span class="dir-icon">${d.icon}</span>${d.label}`;
-    btn.onclick = () => { closeModal('bomb-overlay'); eliminateDirection(r, c, d.dir); };
+    btn.onclick = () => { closeModal('bomb-overlay'); gameState.pendingBomb = null; eliminateDirection(r, c, d.dir); };
     container.appendChild(btn);
   });
   document.getElementById('bomb-overlay-title').textContent = '🧨 鞭炮！选择消除方向';
@@ -3503,12 +3505,14 @@ function onBomb(r, c) {
 
   updateLegendCounts();
   if(bombTreasureCount > 0) {
-    gameState.treasureFound += bombTreasureCount;
-    document.getElementById('treasure-count').textContent = gameState.treasureFound;
-    setTimeout(() => triggerStarRain(false), ring.length * 40 + 200);
-    if(gameState.treasureFound >= gameState.treasureGoal) {
-      setTimeout(showWin, ring.length * 40 + 600);
-    }
+    setTimeout(() => {
+      gameState.treasureFound += bombTreasureCount;
+      document.getElementById('treasure-count').textContent = gameState.treasureFound;
+      triggerStarRain(false);
+      if(gameState.treasureFound >= gameState.treasureGoal) {
+        setTimeout(showWin, 400);
+      }
+    }, ring.length * 40 + 400);
   }
 }
 
@@ -3560,12 +3564,14 @@ function eliminateDirection(r, c, dir) {
   // Count eliminated treasures and check win condition
   updateLegendCounts();
   if(treasureCount > 0) {
-    gameState.treasureFound += treasureCount;
-    document.getElementById('treasure-count').textContent = gameState.treasureFound;
-    setTimeout(() => triggerStarRain(false), cells.length * 30 + 200);
-    if(gameState.treasureFound >= gameState.treasureGoal) {
-      setTimeout(showWin, cells.length * 30 + 600);
-    }
+    setTimeout(() => {
+      gameState.treasureFound += treasureCount;
+      document.getElementById('treasure-count').textContent = gameState.treasureFound;
+      triggerStarRain(false);
+      if(gameState.treasureFound >= gameState.treasureGoal) {
+        setTimeout(showWin, 400);
+      }
+    }, cells.length * 30 + 400);
   }
 }
 
@@ -4128,15 +4134,28 @@ async function saveGame(exitAfter=false) {
     completedChallenges: gameState.completedChallenges,
     revealedCount: gameState.revealedCount,
     pendingDraftCell: gameState.pendingDraftCell || null,
+    pendingBomb: gameState.pendingBomb || null,
     won: gameState.won || false,
     savedAt
   };
-  // Save to Supabase (upsert) and localStorage as backup
+  // Save to localStorage with verification
+  try {
+    const saves = DB.saves();
+    if(!saves[currentUser.name]) saves[currentUser.name] = {};
+    saves[currentUser.name][key] = data;
+    DB.saveSaves(saves);
+    // Verify write succeeded
+    const verify = DB.saves();
+    if(!verify[currentUser.name]?.[key]) {
+      // Write failed, try again with just this save
+      localStorage.setItem('xunbao_save_' + currentUser.name + '_' + key, JSON.stringify(data));
+    }
+  } catch(e) {
+    // Fallback: save individually
+    try { localStorage.setItem('xunbao_save_' + currentUser.name + '_' + key, JSON.stringify(data)); } catch(e2) {}
+  }
+  // Save to Supabase
   SB.upsertSave(currentUser.name, key, data, savedAt);
-  const saves = DB.saves();
-  if(!saves[currentUser.name]) saves[currentUser.name] = {};
-  saves[currentUser.name][key] = data;
-  DB.saveSaves(saves);
 
   // If save modal is open, refresh the list to show updated time
   const savedOverlay = document.getElementById('saved-overlay');
@@ -4170,6 +4189,17 @@ async function showSavedGames() {
   const localSaves = DB.saves();
   const localUserSaves = localSaves[currentUser?.name] || {};
   let allSaves = { ...localUserSaves };
+
+  // Also check individual fallback save keys
+  Object.keys(localStorage).forEach(k => {
+    const prefix = 'xunbao_save_' + currentUser.name + '_';
+    if(k.startsWith(prefix)) {
+      const saveKey = k.slice(prefix.length);
+      if(!allSaves[saveKey]) {
+        try { allSaves[saveKey] = JSON.parse(localStorage.getItem(k)); } catch(e) {}
+      }
+    }
+  });
 
   // Merge with Supabase — local ALWAYS wins (local is most recently saved)
   try {
@@ -4413,7 +4443,8 @@ function loadGameData(s) {
     startTime: Date.now() - (s.elapsed||0)*1000,
     completedChallenges: JSON.parse(JSON.stringify(s.completedChallenges || [])),
     revealedCount: s.revealedCount || 0,
-    pendingDraftCell: s.pendingDraftCell || null
+    pendingDraftCell: s.pendingDraftCell || null,
+    pendingBomb: s.pendingBomb || null
   };
   document.getElementById('game-title').textContent = THEME_NAMES[s.theme] + ' 冒险';
   document.getElementById('game-screen').dataset.theme = s.theme;
@@ -4434,6 +4465,11 @@ function loadGameData(s) {
     const { r, c } = s.pendingDraftCell;
     gameState.pendingDraftCell = s.pendingDraftCell;
     setTimeout(() => { showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！'); setTimeout(() => onChallenge(r, c), 300); }, 200);
+  }
+  // Restore pending firecracker direction selection
+  if(s.pendingBomb && s.pendingBomb.type === 'firecracker') {
+    const { r, c } = s.pendingBomb;
+    setTimeout(() => { showToast('🧨 有一个鞭炮等待选择消除方向！'); setTimeout(() => onFirecracker(r, c), 300); }, 400);
   }
 }
 
@@ -4637,6 +4673,11 @@ function peekMap(on) {
     overlay.classList.remove('peeking');
   }
 }
+
+// Global fallback: always cancel peek if user lifts finger anywhere or leaves page
+document.addEventListener('touchend', () => peekMap(false), { passive: true });
+document.addEventListener('touchcancel', () => peekMap(false), { passive: true });
+document.addEventListener('mouseup', () => peekMap(false));
 
 
 function switchHistTab(btn, theme) {
@@ -4885,8 +4926,8 @@ if(!_shovelEmoji) {
     </div>
     <div class="modal-footer" style="justify-content:center;padding-top:8px;">
       <button class="btn btn-ghost" id="peek-map-btn" style="font-size:9px;width:100%;" 
-        onmousedown="peekMap(true)" onmouseup="peekMap(false)" 
-        ontouchstart="peekMap(true)" ontouchend="peekMap(false)">
+        onmousedown="peekMap(true)" onmouseup="peekMap(false)" onmouseleave="peekMap(false)"
+        ontouchstart="peekMap(true)" ontouchend="peekMap(false)" ontouchcancel="peekMap(false)" ontouchmove="peekMap(false)">
         👁 按住查看局势
       </button>
     </div>
