@@ -2012,7 +2012,6 @@ body::before {
   </div>
   
   <div class="home-content">
-    <div style="background:rgba(192,72,64,0.08);border:2px solid rgba(192,72,64,0.5);border-radius:3px;padding:10px 16px;margin-bottom:12px;text-align:center;font-family:var(--body);font-size:13px;font-weight:bold;color:#c04840;line-height:1.6;">⚠️ 此版本为试运行版本，正式上线时，所有试运行期间的用户数据都会被清除</div>
     <div class="welcome-msg">你好，<span id="welcome-name" style="color:#e8960a;font-weight:bold;">侦探</span>，欢迎来到寻找黄金宝物的挑战。<br>请选择主题地图，开启寻宝之旅吧！<br><span style="opacity:0.85;font-size:0.9em"><span class="welcome-star">★</span> 我为你在地图提前埋下了道具，预祝寻宝愉快。<span class="welcome-star">★</span></span></div>
     <div class="section-title">◈ 选择主题开始冒险</div>
     <div class="themes-grid">
@@ -2918,11 +2917,11 @@ async function doLogin() {
     avatar = users[name].avatar || '🦊';
   }
   err.style.display='none';
-  loginUser(name, avatar);
+  loginUser(name, avatar, sbUser?.id || null);
 }
 
-function loginUser(name, avatar) {
-  currentUser = { name, avatar };
+function loginUser(name, avatar, userId) {
+  currentUser = { name, avatar, id: userId || null };
   document.getElementById('home-username').textContent = name;
   document.getElementById('home-avatar').textContent = avatar;
   const wn = document.getElementById('welcome-name'); if(wn) { wn.textContent = name + '侦探'; wn.style.color='#e8960a'; wn.style.fontWeight='bold'; }
@@ -4243,6 +4242,7 @@ function showProfile() {
       '<div>' +
         '<div style="display:flex;align-items:center;gap:8px;">' +
           '<div class="profile-name">' + currentUser.name + '</div>' +
+          (currentUser.id ? '<span style="font-family:var(--pixel);font-size:6px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:2px 6px;border-radius:2px;margin-left:6px;">ID·' + String(currentUser.id).padStart(5,'0') + '</span>' : '') +
           '<button onclick="showRenameModal()" style="font-family:var(--pixel);font-size:7px;padding:3px 8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">✏ 改名</button>' +
           '<span style="font-family:var(--pixel);font-size:6px;color:var(--text3);">改名×' + (u.renameCount||u.rename_count||0) + '</span>' +
         '</div>' +
