@@ -3253,8 +3253,8 @@ function startGame(size) {
     gameState.pendingDraftCell = s.pendingDraftCell;
     setTimeout(() => {
       showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！');
-      setTimeout(() => onChallenge(r, c), 800);
-    }, 600);
+      setTimeout(() => onChallenge(r, c), 300);
+    }, 200);
   }
 }
 
@@ -3740,6 +3740,8 @@ function submitChallenge() {
     });
     gameState.pendingDraftCell = null;
     pendingChallengeCell = null;
+    // Auto-save so the completed challenge is persisted immediately
+    saveGame();
   }
 }
 
@@ -4113,11 +4115,13 @@ async function saveGame(exitAfter=false) {
   if(!gameState||!currentUser) return;
   const key = `${gameState.theme}_${gameState.seed}`;
   const savedAt = Date.now();
+  // Deep clone grid to avoid reference issues
+  const gridClone = JSON.parse(JSON.stringify(gameState.grid));
   const data = {
     theme: gameState.theme,
     size: gameState.size,
     seed: gameState.seed,
-    grid: gameState.grid.map(row=>row.map(cell=>({...cell}))),
+    grid: gridClone,
     treasureFound: gameState.treasureFound,
     startTime: gameState.startTime,
     elapsed: Math.floor((Date.now()-gameState.startTime)/1000),
@@ -4133,6 +4137,12 @@ async function saveGame(exitAfter=false) {
   if(!saves[currentUser.name]) saves[currentUser.name] = {};
   saves[currentUser.name][key] = data;
   DB.saveSaves(saves);
+
+  // If save modal is open, refresh the list to show updated time
+  const savedOverlay = document.getElementById('saved-overlay');
+  if(savedOverlay && (savedOverlay.classList.contains('show') || savedOverlay.style.display === 'flex')) {
+    showSavedGames();
+  }
 
   const btn = document.getElementById('save-btn');
   if(btn) {
@@ -4156,16 +4166,23 @@ async function showSavedGames() {
   list.innerHTML = '<div class="empty-state">加载中...</div>';
   openModal('saved-overlay');
   
-  // Try Supabase first, fallback to localStorage
-  let sbSaves = await SB.getSaves(currentUser.name);
-  let allSaves = {};
-  
-  if(sbSaves && sbSaves.length > 0) {
-    sbSaves.forEach(s => { allSaves[s.save_key] = s.data; });
-  } else {
-    const localSaves = DB.saves();
-    allSaves = localSaves[currentUser?.name] || {};
-  }
+  // Always load local first (most up-to-date grid state)
+  const localSaves = DB.saves();
+  const localUserSaves = localSaves[currentUser?.name] || {};
+  let allSaves = { ...localUserSaves };
+
+  // Merge with Supabase — local ALWAYS wins (local is most recently saved)
+  try {
+    const sbSaves = await SB.getSaves(currentUser.name);
+    if(sbSaves && sbSaves.length > 0) {
+      sbSaves.forEach(s => {
+        // Only add from Supabase if no local version exists (cross-device scenario)
+        if(!allSaves[s.save_key]) {
+          allSaves[s.save_key] = s.data;
+        }
+      });
+    }
+  } catch(e) {}
   
   list.innerHTML = '';
   const keys = Object.keys(allSaves);
@@ -4186,22 +4203,27 @@ async function showSavedGames() {
 
 async function deleteSaveItem(key) {
   if(!currentUser) return;
-  // Remove from localStorage
-  const saves = DB.saves();
-  if(saves[currentUser.name] && saves[currentUser.name][key]) {
-    delete saves[currentUser.name][key];
-    DB.saveSaves(saves);
-  }
-  // Remove from Supabase
-  await SB.deleteSave(currentUser.name, key);
-  // Remove from UI
-  const item = document.getElementById('save-item-' + key);
-  if(item) item.remove();
-  // Show empty state if no saves left
-  const list = document.getElementById('saved-list');
-  if(list && list.children.length === 0) {
-    list.innerHTML = '<div class="empty-state">暂无存档</div>';
-  }
+  // Show pixel-style confirm modal
+  const btn = document.getElementById('delete-save-confirm-btn');
+  btn.onclick = async () => {
+    closeModal('delete-save-overlay');
+    // Remove from UI immediately
+    const item = document.getElementById('save-item-' + key);
+    if(item) item.remove();
+    const list = document.getElementById('saved-list');
+    if(list && list.children.length === 0) {
+      list.innerHTML = '<div class="empty-state">暂无存档</div>';
+    }
+    // Remove from localStorage immediately
+    const saves = DB.saves();
+    if(saves[currentUser.name] && saves[currentUser.name][key]) {
+      delete saves[currentUser.name][key];
+      DB.saveSaves(saves);
+    }
+    // Remove from Supabase async (no need to wait)
+    SB.deleteSave(currentUser.name, key);
+  };
+  openModal('delete-save-overlay');
 }
 
 function loadGame(key) {
@@ -4245,8 +4267,8 @@ function loadGame(key) {
     gameState.pendingDraftCell = s.pendingDraftCell;
     setTimeout(() => {
       showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！');
-      setTimeout(() => onChallenge(r, c), 800);
-    }, 600);
+      setTimeout(() => onChallenge(r, c), 300);
+    }, 200);
   }
 }
 
@@ -4382,12 +4404,14 @@ function renderHistory(filterTheme) {
 function loadGameData(s) {
   closeModal('saved-overlay');
   if(!s) return;
+  // Deep clone grid to avoid reference issues
+  const gridClone = JSON.parse(JSON.stringify(s.grid));
   gameState = {
-    theme: s.theme, size: s.size, seed: s.seed, grid: s.grid,
+    theme: s.theme, size: s.size, seed: s.seed, grid: gridClone,
     treasureGoal: s.size === 6 ? 3 : s.size === 9 ? 6 : 10,
     treasureFound: s.treasureFound,
     startTime: Date.now() - (s.elapsed||0)*1000,
-    completedChallenges: s.completedChallenges || [],
+    completedChallenges: JSON.parse(JSON.stringify(s.completedChallenges || [])),
     revealedCount: s.revealedCount || 0,
     pendingDraftCell: s.pendingDraftCell || null
   };
@@ -4409,7 +4433,7 @@ function loadGameData(s) {
   if(s.pendingDraftCell) {
     const { r, c } = s.pendingDraftCell;
     gameState.pendingDraftCell = s.pendingDraftCell;
-    setTimeout(() => { showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！'); setTimeout(() => onChallenge(r, c), 800); }, 600);
+    setTimeout(() => { showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！'); setTimeout(() => onChallenge(r, c), 300); }, 200);
   }
 }
 
@@ -4794,6 +4818,8 @@ if(!_shovelEmoji) {
   </div>
 </div>
 
+<!-- Delete Save Confirm Modal -->
+
 <!-- Confirm Modal -->
 <div class="overlay" id="confirm-overlay">
   <div class="modal" style="max-width:300px">
@@ -4948,6 +4974,22 @@ if(!_shovelEmoji) {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('rename-overlay')">取消</button>
       <button class="btn btn-primary" style="width:auto" onclick="confirmRename()">✓ 确认改名</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Save Confirm Modal -->
+<div class="overlay" id="delete-save-overlay">
+  <div class="modal" style="max-width:300px">
+    <div class="modal-header">
+      <div class="modal-title">⚠ 删除存档</div>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-text">确定要删除这个存档吗？<br>此操作无法撤销。</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('delete-save-overlay')">取消</button>
+      <button class="btn btn-primary" id="delete-save-confirm-btn" style="width:auto;background:var(--red);border-color:#a03030;box-shadow:0 3px 0 #7a2020;">确认删除</button>
     </div>
   </div>
 </div>
