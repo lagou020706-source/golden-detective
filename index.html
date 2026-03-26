@@ -4177,9 +4177,30 @@ async function showSavedGames() {
       const d = new Date(s.savedAt);
       const item = document.createElement('div');
       item.className = 'saved-item';
-      item.innerHTML = '<div class="saved-info"><div class="saved-title">' + (THEME_NAMES[s.theme]||s.theme) + ' · ' + s.size + '×' + s.size + '</div><div class="saved-sub">⭐ ' + s.treasureFound + '/' + (s.size===6?3:s.size===9?6:10) + ' · ' + d.toLocaleDateString('zh-CN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + '</div></div><button class="btn btn-primary" style="width:auto;font-size:7px;padding:8px 12px" onclick="loadGameData(' + JSON.stringify(s).replace(/"/g,'&quot;') + ')">继续</button>';
+      item.id = 'save-item-' + key;
+      item.innerHTML = '<div class="saved-info"><div class="saved-title">' + (THEME_NAMES[s.theme]||s.theme) + ' · ' + s.size + '×' + s.size + '</div><div class="saved-sub">⭐ ' + s.treasureFound + '/' + (s.size===6?3:s.size===9?6:10) + ' · ' + d.toLocaleDateString('zh-CN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + '</div></div><div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-primary" style="width:auto;font-size:7px;padding:10px 18px;" onclick="loadGameData(' + JSON.stringify(s).replace(/"/g,'&quot;') + ')">继续</button><button class="btn btn-ghost" style="width:auto;font-size:6px;padding:6px 10px;color:var(--red);border-color:var(--red);" onclick="deleteSaveItem(\'' + key + '\')">删除</button></div>';
       list.appendChild(item);
     });
+  }
+}
+
+async function deleteSaveItem(key) {
+  if(!currentUser) return;
+  // Remove from localStorage
+  const saves = DB.saves();
+  if(saves[currentUser.name] && saves[currentUser.name][key]) {
+    delete saves[currentUser.name][key];
+    DB.saveSaves(saves);
+  }
+  // Remove from Supabase
+  await SB.deleteSave(currentUser.name, key);
+  // Remove from UI
+  const item = document.getElementById('save-item-' + key);
+  if(item) item.remove();
+  // Show empty state if no saves left
+  const list = document.getElementById('saved-list');
+  if(list && list.children.length === 0) {
+    list.innerHTML = '<div class="empty-state">暂无存档</div>';
   }
 }
 
@@ -4242,7 +4263,7 @@ function showProfile() {
       '<div>' +
         '<div style="display:flex;align-items:center;gap:8px;">' +
           '<div class="profile-name">' + currentUser.name + '</div>' +
-          (currentUser.id ? '<span style="font-family:var(--pixel);font-size:6px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:2px 6px;border-radius:2px;margin-left:6px;">ID·' + String(currentUser.id).padStart(5,'0') + '</span>' : '') +
+          (currentUser.id ? '<div style="margin-top:4px;"><span style="font-family:var(--pixel);font-size:6px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);padding:2px 6px;border-radius:2px;">ID·' + String(currentUser.id).padStart(5,'0') + '</span></div>' : '') +
           '<button onclick="showRenameModal()" style="font-family:var(--pixel);font-size:7px;padding:3px 8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;border-radius:2px;color:var(--text3);">✏ 改名</button>' +
           '<span style="font-family:var(--pixel);font-size:6px;color:var(--text3);">改名×' + (u.renameCount||u.rename_count||0) + '</span>' +
         '</div>' +
