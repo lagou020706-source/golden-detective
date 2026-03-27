@@ -4225,7 +4225,7 @@ async function showSavedGames() {
       const item = document.createElement('div');
       item.className = 'saved-item';
       item.id = 'save-item-' + key;
-      item.innerHTML = '<div class="saved-info"><div class="saved-title">' + (THEME_NAMES[s.theme]||s.theme) + ' · ' + s.size + '×' + s.size + '</div><div class="saved-sub">⭐ ' + s.treasureFound + '/' + (s.size===6?3:s.size===9?6:10) + ' · ' + d.toLocaleDateString('zh-CN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + '</div></div><div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-primary" style="width:auto;font-size:7px;padding:10px 18px;" onclick="loadGameData(' + JSON.stringify(s).replace(/"/g,'&quot;') + ')">继续</button><button class="btn btn-ghost" style="width:auto;font-size:6px;padding:6px 10px;color:var(--red);border-color:var(--red);" onclick="deleteSaveItem(\'' + key + '\')">删除</button></div>';
+      item.innerHTML = '<div class="saved-info"><div class="saved-title">' + (THEME_NAMES[s.theme]||s.theme) + ' · ' + s.size + '×' + s.size + '</div><div class="saved-sub">⭐ ' + s.treasureFound + '/' + (s.size===6?3:s.size===9?6:10) + ' · ' + d.toLocaleDateString('zh-CN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + '</div></div><div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-primary" style="width:auto;font-size:7px;padding:10px 18px;" onclick="loadGameByKey(\'' + key + '\')">继续</button><button class="btn btn-ghost" style="width:auto;font-size:6px;padding:6px 10px;color:var(--red);border-color:var(--red);" onclick="deleteSaveItem(\'' + key + '\')">删除</button></div>';
       list.appendChild(item);
     });
   }
@@ -4430,6 +4430,26 @@ function renderHistory(filterTheme) {
   });
 }
 
+
+async function loadGameByKey(key) {
+  // Always read freshest data: local first, then Supabase fallback
+  const saves = DB.saves();
+  let s = saves[currentUser?.name]?.[key];
+  // Check individual fallback key
+  if(!s) {
+    try { s = JSON.parse(localStorage.getItem('xunbao_save_' + currentUser.name + '_' + key)); } catch(e) {}
+  }
+  // Fallback to Supabase if nothing local
+  if(!s) {
+    try {
+      const sbSaves = await SB.getSaves(currentUser.name);
+      const found = sbSaves?.find(sv => sv.save_key === key);
+      if(found) s = found.data;
+    } catch(e) {}
+  }
+  if(!s) { showToast('找不到存档数据'); return; }
+  loadGameData(s);
+}
 
 function loadGameData(s) {
   closeModal('saved-overlay');
