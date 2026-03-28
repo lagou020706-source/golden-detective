@@ -3101,10 +3101,8 @@ async function checkAutoResume() {
   });
   if(!latest) return;
   // Show resume toast
-  const mins = String(Math.floor((latest.elapsed||0)/60)).padStart(2,'0');
-  const secs = String((latest.elapsed||0)%60).padStart(2,'0');
   const themeName = (window.THEME_NAMES||{})[latest.theme] || latest.theme;
-  showResumePrompt(latest, `${themeName} · ${mins}:${secs}`);
+  showResumePrompt(latest, `${themeName} · ${fmtTime(latest.elapsed||0)}`);
 }
 
 function showResumePrompt(saveData, label) {
@@ -3385,7 +3383,7 @@ function startGame(size) {
     grid,
     treasureGoal: size === 6 ? 3 : size === 9 ? 6 : 10,
     treasureFound: 0,
-    startTime: Date.now(),
+    startTime: null,
     elapsed: 0,
     completedChallenges: [],
     revealedCount: 0
@@ -3400,10 +3398,10 @@ function startGame(size) {
   document.getElementById('challenge-total').textContent = totalChallenges;
   currentScale = 1;
   document.getElementById('zoom-val').textContent = '100%';
+  document.getElementById('game-timer').textContent = '00:00';
 
   renderMap();
   showScreen('game-screen');
-  startTimer();
   setupMapInteraction();
   setTimeout(updateLegendCounts, 100);
 
@@ -3563,10 +3561,11 @@ function revealCell(r, c) {
   // Challenge cells: show modal even if already revealed (allow re-open for draft)
   if(cell.type === 'challenge') {
     if(!cell.challengeDone) {
+      if(!gameState.startTime) { gameState.startTime = Date.now(); startTimer(); }
       onChallenge(r, c);
       return;
     }
-    return; // already completed
+    return;
   }
   // Angel cells: allow re-click to show saved hint
   if(cell.type === 'angel' && cell.revealed) {
@@ -3575,6 +3574,12 @@ function revealCell(r, c) {
   }
   if(cell.revealed) return;
   
+  // Start timer on first cell click
+  if(!gameState.startTime) {
+    gameState.startTime = Date.now();
+    startTimer();
+  }
+
   cell.revealed = true;
   gameState.revealedCount++;
   updateCell(r, c);
@@ -3992,9 +3997,7 @@ function closeWinStayOnMap() {
 function showWin() {
   stopTimer();
   const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
-  const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
-  const secs = String(elapsed%60).padStart(2,'0');
-  document.getElementById('win-time').textContent = `⏱ 用时：${mins}:${secs}`;
+  document.getElementById('win-time').textContent = `⏱ 用时：${fmtTime(elapsed)}`;
   const doneCount = gameState.grid ? gameState.grid.flat().filter(c=>c.challengeDone).length : 0;
   document.getElementById('win-challenges').textContent = `📝 完成挑战：${doneCount} 个`;
 
@@ -4060,12 +4063,11 @@ async function getWinRecordsAsync() {
 // ===================================
 function startTimer() {
   stopTimer();
+  if(!gameState || !gameState.startTime) return;
   const start = gameState.startTime;
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now()-start)/1000);
-    const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
-    const secs = String(elapsed%60).padStart(2,'0');
-    document.getElementById('game-timer').textContent = `${mins}:${secs}`;
+    document.getElementById('game-timer').textContent = fmtTime(elapsed);
   }, 1000);
 }
 
@@ -4290,7 +4292,7 @@ async function saveGame(exitAfter=false) {
     grid: gridClone,
     treasureFound: gameState.treasureFound,
     startTime: gameState.startTime,
-    elapsed: Math.floor((Date.now()-gameState.startTime)/1000),
+    elapsed: gameState.startTime ? Math.floor((Date.now()-gameState.startTime)/1000) : 0,
     completedChallenges: gameState.completedChallenges,
     revealedCount: gameState.revealedCount,
     pendingDraftCell: gameState.pendingDraftCell || null,
@@ -4429,7 +4431,7 @@ function loadGame(key) {
     grid: s.grid,
     treasureGoal: s.size === 6 ? 3 : s.size === 9 ? 6 : 10,
     treasureFound: s.treasureFound,
-    startTime: Date.now() - (s.elapsed||0)*1000,
+    startTime: s.startTime || (Date.now() - (s.elapsed||0)*1000),
     completedChallenges: s.completedChallenges || [],
     revealedCount: s.revealedCount || 0
   };
@@ -4625,7 +4627,8 @@ function loadGameData(s) {
     theme: s.theme, size: s.size, seed: s.seed, grid: gridClone,
     treasureGoal: s.size === 6 ? 3 : s.size === 9 ? 6 : 10,
     treasureFound: s.treasureFound,
-    startTime: Date.now() - (s.elapsed||0)*1000,
+    // Always recalibrate startTime to now minus elapsed so offline time accumulates correctly
+    startTime: s.elapsed ? Date.now() - s.elapsed * 1000 : (s.startTime || null),
     completedChallenges: JSON.parse(JSON.stringify(s.completedChallenges || [])),
     revealedCount: s.revealedCount || 0,
     pendingDraftCell: s.pendingDraftCell || null,
@@ -4641,9 +4644,15 @@ function loadGameData(s) {
   document.getElementById('challenge-total').textContent = loadedChallengesTotal;
   currentScale = 1;
   document.getElementById('zoom-val').textContent = '100%';
+  // Show current elapsed time, start ticking if game was in progress
+  if(s.elapsed) {
+    document.getElementById('game-timer').textContent = fmtTime(s.elapsed);
+    startTimer();
+  } else {
+    document.getElementById('game-timer').textContent = '0s';
+  }
   renderMap();
   showScreen('game-screen');
-  startTimer();
   setupMapInteraction();
   setTimeout(updateLegendCounts, 100);
   if(s.pendingDraftCell) {
@@ -4679,9 +4688,12 @@ function switchLbDiff(btn, diff) {
 }
 
 function fmtTime(secs) {
-  const m = Math.floor(secs / 60).toString().padStart(2,'0');
-  const s = (secs % 60).toString().padStart(2,'0');
-  return m + ':' + s;
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if(h > 0) return h + 'h' + String(m).padStart(2,'0') + 'm' + String(s).padStart(2,'0') + 's';
+  if(m > 0) return m + 'm' + String(s).padStart(2,'0') + 's';
+  return s + 's';
 }
 
 async function renderLeaderboard(filterTheme, filterDiff=0) {
@@ -4843,6 +4855,10 @@ document.addEventListener('visibilitychange', () => {
       }
     }
     saveGame();
+  }
+  // Resume timer display when coming back to page
+  if(document.visibilityState === 'visible' && gameState && gameState.startTime && !gameState.won) {
+    startTimer();
   }
 });
 window.addEventListener('beforeunload', () => {
