@@ -1884,6 +1884,10 @@ body::before {
             <div class="avatar-opt av-animals" data-av="🐿️" onclick="selectAvatar(this)">🐿️</div>
             <div class="avatar-opt av-animals" data-av="🦫" onclick="selectAvatar(this)">🦫</div>
             <div class="avatar-opt av-animals" data-av="🦡" onclick="selectAvatar(this)">🦡</div>
+            <div class="avatar-opt av-animals" data-av="🪳" onclick="selectAvatar(this)">🪳</div>
+            <div class="avatar-opt av-animals" data-av="🐜" onclick="selectAvatar(this)">🐜</div>
+            <div class="avatar-opt av-animals" data-av="🦖" onclick="selectAvatar(this)">🦖</div>
+            <div class="avatar-opt av-animals" data-av="🐠" onclick="selectAvatar(this)">🐠</div>
             <!-- fantasy -->
             <div class="avatar-opt av-fantasy" data-av="🔮" onclick="selectAvatar(this)">🔮</div>
             <div class="avatar-opt av-fantasy" data-av="🧙" onclick="selectAvatar(this)">🧙</div>
@@ -1978,7 +1982,7 @@ body::before {
             <div class="avatar-opt av-nature" data-av="🌼" onclick="selectAvatar(this)">🌼</div>
             <div class="avatar-opt av-nature" data-av="🌻" onclick="selectAvatar(this)">🌻</div>
             <div class="avatar-opt av-nature" data-av="🌺" onclick="selectAvatar(this)">🌺</div>
-            <!-- culture -->
+            <div class="avatar-opt av-nature" data-av="🪷" onclick="selectAvatar(this)">🪷</div>
             <div class="avatar-opt av-culture" data-av="🎨" onclick="selectAvatar(this)">🎨</div>
             <div class="avatar-opt av-culture" data-av="📚" onclick="selectAvatar(this)">📚</div>
             <div class="avatar-opt av-culture" data-av="🎵" onclick="selectAvatar(this)">🎵</div>
@@ -5064,7 +5068,7 @@ document.addEventListener('keydown', e => {
 // CHANGE AVATAR
 // ===================================
 const AVATAR_CATS = {
-  animals: ['🦊','🐉','🐺','🦁','🐼','🦋','🐬','🦉','🐸','🐯','🦝','🦨','🐻','🐨','🦘','🦦','🦥','🐙','🦑','🦈','🦜','🦩','🦚','🐆','🦬','🐅','🦓','🦏','🐘','🦛','🦒','🦌','🐊','🦕','🦖','🐢','🦎','🐍','🦟','🪲','🐝','🪱','🦂','🦀','🦞','🦐','🪸','🐡','🐠','🐟','🐳','🐋','🐊','🦭','🦆','🦅','🦇','🐓','🦤','🪶','🦢','🕊️','🦃','🐇','🐈','🐕','🐩','🐈‍⬛','🐕‍🦺','🦔','🐿️','🦫','🦡'],
+  animals: ['🦊','🐉','🐺','🦁','🐼','🦋','🐬','🦉','🐸','🐯','🦝','🦨','🐻','🐨','🦘','🦦','🦥','🐙','🦑','🦈','🦜','🦩','🦚','🐆','🦬','🐅','🦓','🦏','🐘','🦛','🦒','🦌','🐊','🦕','🦖','🐢','🦎','🐍','🦟','🪲','🐝','🪱','🦂','🦀','🦞','🦐','🪸','🐡','🐠','🐟','🐳','🐋','🐊','🦭','🦆','🦅','🦇','🐓','🦤','🪶','🦢','🕊️','🦃','🐇','🐈','🐕','🐩','🐈‍⬛','🐕‍🦺','🦔','🐿️','🦫','🦡','🪳','🐜'],
   fantasy: ['🔮','🧙','🧝','🧚','🧜','🦄','👾','🎭','🗡️','🧛','🧟','🧞','🧠','👹','👺','🤖','👻','💀','🐲','🏯','⚔️','🛡️','🪄','🧿','🌀','🧌','🪬','🫧','🌟','💥','🌊','⚗️','🔯','☯️','🌙','🌑','🪐','🌌','🌠','💫','🎇','🎆','🪩','🫀','🫁','🧬','🔭','🛸','👁️','🫶'],
   nature: ['🌙','⭐','🌊','🌸','🍀','🌿','🌋','❄️','🌈','🌞','🌝','💫','✨','🌪️','🔥','💧','🌵','🍄','🌺','🌻','🌹','🍁','🌴','🌾','⛰️','🌏','☁️','⛈️','🌩️','🌤️','🌅','🌄','🌃','🏔️','🗻','🏝️','🏜️','🌾','🌱','🌲','🌳','🌷','🪷','🪸','🐚','🪨','🌑','🪐','☄️','🌍','🌎','🫧','💦','🌬️','🍃','🪹','🪺','🐾','🍄‍🟫','🌼'],
   culture: ['🎨','📚','🎵','🎬','✒️','🎭','🎪','🏆','🎮','🎯','♟️','🎲','🧩','🪗','🎸','🎹','🎺','🎻','🥁','📷','🔭','🔬','💎','🗿','🏛️','🎠','🎡','🎢','🎪','🎗️','🎟️','🎫','🏅','🥇','🎖️','📜','📖','✏️','🖊️','🖌️','🖼️','🎑','🏺','🗽','⛩️','🛕','🕌','🕍','⛪','🏰','🗼','🎋','🎍','🎎','🎐','🧧','🎊','🎉','🪅','🪆','🪁','🎥','🧸','💮'],
