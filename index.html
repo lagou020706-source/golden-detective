@@ -2197,7 +2197,7 @@ body::before {
       <button onclick="location.reload()" style="font-family:var(--pixel);font-size:7px;padding:6px 16px;border:1.5px solid var(--border);background:var(--bg2);border-radius:3px;cursor:pointer;color:var(--text2);box-shadow:0 2px 0 var(--border);">🔄 刷新网页 <span style="font-family:var(--body);font-size:10px;color:var(--text3);">网页系统近期存在更新</span></button>
     </div>
     <div style="background:rgba(124,92,191,0.08);border:1.5px solid rgba(124,92,191,0.25);border-radius:3px;padding:10px 16px;margin-bottom:12px;line-height:1.8;font-size:13px;">
-      <div style="color:#c04840;font-size:12px;">⚠️ 20260329-0945 版本更新：修改题库、新增系统刷新键、自动登录功能、修复天使格复点功能、计时器离线计时功能、新增🎓💩🧻🚽🧋🍙🍔🍘🍫等头像</div>
+      <div style="color:#c04840;font-size:12px;">⚠️ 20260413-1530 版本更新：修复宝物分布随机性、修复连锁反应 — 鞭炮/炸弹触发相邻的炸弹，天使格被波及后可点击。</div>
     </div>
     <div class="welcome-msg">你好，<span id="welcome-name" style="color:#e8960a;font-weight:bold;">侦探</span>，欢迎来到寻找黄金宝物的挑战。<br>请选择主题地图，开启寻宝之旅吧！<br><span style="opacity:0.85;font-size:0.9em"><span class="welcome-star">★</span> 我为你在地图提前埋下了道具，预祝寻宝愉快。<span class="welcome-star">★</span></span></div>
     <div class="section-title">◈ 选择主题开始冒险</div>
@@ -2450,13 +2450,23 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 async function sbFetch(method, table, body=null, params='') {
   const url = SUPABASE_URL + '/rest/v1/' + table + (params ? '?' + params : '');
+  // Determine correct Prefer header
+  let prefer = 'return=minimal';
+  if(method === 'POST') {
+    if(params && params.includes('on_conflict')) {
+      // Upsert: merge duplicates and return minimal
+      prefer = 'resolution=merge-duplicates,return=minimal';
+    } else {
+      prefer = 'return=representation';
+    }
+  }
   const opts = {
     method,
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': 'Bearer ' + SUPABASE_KEY,
       'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+      'Prefer': prefer
     }
   };
   if(body) opts.body = JSON.stringify(body);
@@ -2840,7 +2850,7 @@ const CHALLENGES = {
     '观看一部北欧电影',
     '观看一部第三世界电影',
     '观看一部意大利电影',
-    '观看一部苏联或俄罗斯电影',
+    '观看一部苏联电影',
     '观看一部经典怀旧电影',
     '观看一部新马电影',
     '观看一部旧好莱坞电影',
@@ -2863,8 +2873,8 @@ const CHALLENGES = {
     '观看一部IMDB Top榜单电影',
     '观看一部文艺片',
     '观看一部剧情片',
-    '观看一部血腥cult片',
-    '观看一部超自然恐怖片',
+    '观看一部血腥cult片，血腥不耐受可换犯罪',
+    '观看一部超自然恐怖片，恐怖不耐受可换奇幻',
     '观看一部入围柏林电影节的电影',
     '观看一部入围戛纳电影节的电影',
     '观看一部入围奥斯卡的电影',
@@ -2872,10 +2882,11 @@ const CHALLENGES = {
     '观看一部新浪潮电影',
     '观看一部现实主义电影',
     '观看一部港片',
-    '观看一部铅黄电影',
+    '观看一部铅黄电影，铅黄不耐受可换超现实主义',
     '观看一部黑色电影',
     '观看一部意大利新现实主义电影',
     '观看一部法国新浪潮电影',
+    '观看一部旧好莱坞电影',
     '观看一部新好莱坞电影',
     '观看一部中国第五代导演作品',
     '观看一部台湾新电影',
@@ -2887,6 +2898,7 @@ const CHALLENGES = {
     '观看一部新德国电影',
     '观看一部女导演执导的电影',
     '观看一部德国表现主义电影',
+    '观看一部苏联电影',
     '观看一部法国超现实主义电影',
     '观看一部视觉系电影',
     '观看一部纪录片',
@@ -3128,15 +3140,24 @@ function loginUser(name, avatar, userId) {
 
 async function checkAutoResume() {
   if(!currentUser) return;
-  // Look for most recent non-won save in localStorage
+  // Collect all local saves
   const saves = DB.saves();
   const userSaves = saves[currentUser.name] || {};
   let latest = null;
   Object.values(userSaves).forEach(s => {
     if(!s.won && s.savedAt && (!latest || s.savedAt > latest.savedAt)) latest = s;
   });
+  // Also check Supabase — pick whichever is newer (handles cross-device)
+  try {
+    const sbSaves = await SB.getSaves(currentUser.name);
+    if(sbSaves && sbSaves.length > 0) {
+      sbSaves.forEach(s => {
+        const d = s.data;
+        if(d && !d.won && d.savedAt && (!latest || d.savedAt > latest.savedAt)) latest = d;
+      });
+    }
+  } catch(e) {}
   if(!latest) return;
-  // Show resume toast
   const themeName = (window.THEME_NAMES||{})[latest.theme] || latest.theme;
   showResumePrompt(latest, `${themeName} · ${fmtTime(latest.elapsed||0)}`);
 }
@@ -3271,9 +3292,9 @@ function tryGenerate(size, counts, rand, relaxed=false) {
   for(let i=0; i<counts.angel; i++) pool.push('angel');
   for(let i=0; i<counts.challenge; i++) pool.push('challenge');
 
-  // Fisher-Yates shuffle
+  // Standard Fisher-Yates shuffle
   for(let i=pool.length-1;i>0;i--) {
-    const j = Math.floor(rand()*pool.length);
+    const j = Math.floor(rand()*(i+1));
     [pool[i],pool[j]] = [pool[j],pool[i]];
   }
 
@@ -3307,6 +3328,14 @@ function tryGenerate(size, counts, rand, relaxed=false) {
       }
     }
   }
+
+  // Spread check: no more than 1 treasure per column
+  // This prevents clustering in the same column (A列/E列 problem)
+  const tCols = new Array(size).fill(0);
+  for(let r=0;r<size;r++) for(let c=0;c<size;c++) {
+    if(grid[r][c].type==='treasure') tCols[c]++;
+  }
+  if(tCols.some(n=>n>1)) return null;
 
   return grid;
 }
@@ -3447,16 +3476,6 @@ function startGame(size) {
   showScreen('game-screen');
   setupMapInteraction();
   setTimeout(updateLegendCounts, 100);
-
-  // If there was a pending draft challenge, auto-open it after a short delay
-  if(s.pendingDraftCell) {
-    const { r, c } = s.pendingDraftCell;
-    gameState.pendingDraftCell = s.pendingDraftCell;
-    setTimeout(() => {
-      showToast('📌 你有一个未完成的阅读挑战，请完成后继续探索！');
-      setTimeout(() => onChallenge(r, c), 300);
-    }, 200);
-  }
 }
 
 // ===================================
@@ -3505,9 +3524,18 @@ function renderMap() {
       td.dataset.col = c;
       
       if(cell.eliminated) {
-        td.classList.add('revealed','eliminated');
-        const info = TYPE_INFO[cell.type];
-        td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?`<span style="opacity:0.4">${YUANBAO_IMG}</span>`:info.icon==='__SHOVEL__'?`<span style="opacity:0.4">${SHOVEL_IMG}</span>`:`<span class="cell-icon" style="opacity:0.4">${info.icon}</span>`}</div>`;
+        if(cell.type === 'treasure') {
+          td.classList.add('revealed','type-treasure');
+          td.innerHTML = `<div class="cell-inner">${YUANBAO_IMG}<span class="cell-label" style="color:#c8a840;">宝物</span></div>`;
+        } else if(cell.type === 'angel') {
+          td.classList.add('revealed','type-angel');
+          td.style.cursor = 'pointer';
+          td.innerHTML = `<div class="cell-inner"><span class="cell-icon">😇</span><span class="cell-label" style="font-size:7px;">点击查看</span></div>`;
+        } else {
+          td.classList.add('revealed','eliminated');
+          const info = TYPE_INFO[cell.type];
+          td.innerHTML = `<div class="cell-inner">${info.icon==='__YUANBAO__'?`<span style="opacity:0.4">${YUANBAO_IMG}</span>`:info.icon==='__SHOVEL__'?`<span style="opacity:0.4">${SHOVEL_IMG}</span>`:`<span class="cell-icon" style="opacity:0.4">${info.icon}</span>`}</div>`;
+        }
       } else if(cell.revealed) {
         td.classList.add('revealed', TYPE_INFO[cell.type].cls);
         const info = TYPE_INFO[cell.type];
@@ -3546,6 +3574,11 @@ function updateCell(r, c) {
     if(cell.type === 'treasure') {
       td.classList.add('revealed', 'type-treasure');
       td.innerHTML = `<div class="cell-inner">${YUANBAO_IMG}<span class="cell-label" style="color:#c8a840;">宝物</span></div>`;
+    } else if(cell.type === 'angel') {
+      // Angel hit by chain: still show as clickable with a visual hint
+      td.classList.add('revealed', 'type-angel');
+      td.style.cursor = 'pointer';
+      td.innerHTML = `<div class="cell-inner"><span class="cell-icon">😇</span><span class="cell-label" style="font-size:7px;">点击查看</span></div>`;
     } else {
       td.classList.add('revealed','eliminated');
       const info = TYPE_INFO[cell.type];
@@ -3567,6 +3600,16 @@ function updateCell(r, c) {
 // ===================================
 function onCellClick(r, c) {
   const cell = gameState.grid[r][c];
+  // Angel cells that were chain-activated (hit by bomb/firecracker wave) can show hint
+  // but still respect the pending draft challenge lock
+  if(cell.eliminated && cell.type === 'angel') {
+    if(gameState.pendingDraftCell) {
+      const {r: pr, c: pc} = gameState.pendingDraftCell;
+      if(r !== pr || c !== pc) { showToast('⚠ 请先完成未提交的阅读挑战！'); return; }
+    }
+    onAngel(r, c);
+    return;
+  }
   if(cell.eliminated) return;
   // If there's a pending draft challenge, only allow that specific cell
   if(gameState.pendingDraftCell) {
@@ -3689,45 +3732,98 @@ function onFirecracker(r, c) {
   openModal('bomb-overlay');
 }
 
+// ── Chain reaction engine ──────────────────────────────────────────────────
+function collectChainCells(startCells, originR, originC) {
+  const { grid, size } = gameState;
+  // visited tracks all positions already accounted for (including the start cells)
+  const visited = new Set(startCells.map(([r,c]) => r+'_'+c));
+  // Also mark the origin explosive itself as visited so it never re-triggers
+  visited.add(originR+'_'+originC);
+
+  const allEliminated = [...startCells];
+  const chainExplosions = [];
+
+  // Queue contains cells in startCells that might themselves be explosives
+  // NOTE: at this point startCells are already marked eliminated=true in the grid,
+  // so we check by type directly (not by eliminated flag) to detect chain triggers
+  const queue = [...startCells];
+
+  while(queue.length > 0) {
+    const [qr, qc] = queue.shift();
+    const cell = grid[qr][qc];
+    if(!cell) continue;
+
+    // If this cell is itself a bomb or firecracker → chain trigger
+    if(cell.type === 'bomb' || cell.type === 'firecracker') {
+      chainExplosions.push({ r: qr, c: qc, type: cell.type });
+      const newCells = getNeighbors(qr, qc, size);
+      newCells.forEach(([nr, nc]) => {
+        const key = nr+'_'+nc;
+        const ncell = grid[nr][nc];
+        // Only add cells that haven't been visited yet and aren't already revealed
+        // (eliminated is OK to re-check here as chain cells get marked after collection)
+        if(!visited.has(key) && ncell && !ncell.revealed) {
+          visited.add(key);
+          allEliminated.push([nr, nc]);
+          queue.push([nr, nc]);
+        }
+      });
+    }
+  }
+  return { allEliminated, chainExplosions };
+}
+
 function onBomb(r, c) {
-  // Bomb: eliminate the surrounding 8 cells (ring)
   const originTd = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
   if(originTd) triggerBombExplosion(originTd);
   document.getElementById('bomb-overlay-title').textContent = '💣 炸弹爆炸！';
   playBombExplosion();
 
   const { grid, size } = gameState;
-  const ring = getNeighbors(r, c, size);
-  let treasureHit = false;
+  const ring = getNeighbors(r, c, size)
+    .filter(([nr,nc]) => !grid[nr][nc].revealed && !grid[nr][nc].eliminated);
 
-  let bombTreasureCount = 0;
-  ring.forEach(([nr, nc], idx) => {
-    const cell = grid[nr][nc];
-    if(!cell.revealed && !cell.eliminated) {
-      cell.eliminated = true;
-      if(cell.type === 'treasure') bombTreasureCount++;
-      setTimeout(() => {
-        const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
-        if(td) {
-          td.classList.add('eliminating');
-          setTimeout(() => updateCell(nr, nc), 380);
-        } else {
-          updateCell(nr, nc);
-        }
-      }, 40 + idx * 40);
-    }
+  // Mark ring cells eliminated first
+  ring.forEach(([nr,nc]) => { grid[nr][nc].eliminated = true; });
+
+  // Collect chain reactions (pass origin so it never re-triggers itself)
+  const { allEliminated, chainExplosions } = collectChainCells(ring, r, c);
+
+  // Mark all chain cells eliminated
+  allEliminated.forEach(([nr,nc]) => {
+    if(!grid[nr][nc].eliminated) grid[nr][nc].eliminated = true;
+    if(grid[nr][nc].type === 'angel') grid[nr][nc].chainActivated = true;
+  });
+
+  // Trigger visual for chain explosions
+  chainExplosions.forEach(({ r: cr, c: cc }) => {
+    const td = document.querySelector(`[data-row="${cr}"][data-col="${cc}"]`);
+    if(td) setTimeout(() => triggerBombExplosion(td), 300);
+  });
+
+  // Animate all eliminated cells
+  let treasureCount = 0;
+  allEliminated.forEach(([nr, nc], idx) => {
+    if(grid[nr][nc].type === 'treasure') treasureCount++;
+    setTimeout(() => {
+      const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
+      if(td) { td.classList.add('eliminating'); setTimeout(() => updateCell(nr, nc), 380); }
+      else updateCell(nr, nc);
+    }, 40 + idx * 35);
   });
 
   updateLegendCounts();
-  if(bombTreasureCount > 0) {
+  const animDelay = allEliminated.length * 35 + 400;
+  if(treasureCount > 0) {
     setTimeout(() => {
-      gameState.treasureFound += bombTreasureCount;
+      gameState.treasureFound += treasureCount;
       document.getElementById('treasure-count').textContent = gameState.treasureFound;
       triggerStarRain(false);
-      if(gameState.treasureFound >= gameState.treasureGoal) {
-        setTimeout(showWin, 400);
-      }
-    }, ring.length * 40 + 400);
+      if(gameState.treasureFound >= gameState.treasureGoal) setTimeout(showWin, 400);
+    }, animDelay);
+  }
+  if(chainExplosions.length > 0) {
+    setTimeout(() => showToast(`💥 连锁反应！触发了 ${chainExplosions.length} 个额外爆炸！`), animDelay - 200);
   }
 }
 
@@ -3749,44 +3845,48 @@ function eliminateDirection(r, c, dir) {
     while(startR>=0 && startC<size) { cells.push([startR--, startC++]); }
   }
 
-  // Get origin cell screen position for explosion origin
   const originTd = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
   if(originTd) triggerBombExplosion(originTd);
 
-  let treasureHit = false;
-  let delay = 0;
+  // Mark initial cells
+  const initialHit = cells.filter(([nr,nc]) => !grid[nr][nc].revealed && !grid[nr][nc].eliminated);
+  initialHit.forEach(([nr,nc]) => { grid[nr][nc].eliminated = true; });
 
-  let treasureCount = 0;
-  cells.forEach(([nr, nc], idx) => {
-    const cell = grid[nr][nc];
-    if(!cell.revealed && !cell.eliminated) {
-      cell.eliminated = true;
-      if(cell.type === 'treasure') treasureCount++;
-
-      // Staggered reveal animation
-      setTimeout(() => {
-        const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
-        if(td) {
-          td.classList.add('eliminating');
-          setTimeout(() => updateCell(nr, nc), 380);
-        } else {
-          updateCell(nr, nc);
-        }
-      }, 40 + idx * 30);
-    }
+  // Collect chain reactions (pass origin so firecracker itself never re-triggers)
+  const { allEliminated, chainExplosions } = collectChainCells(initialHit, r, c);
+  allEliminated.forEach(([nr,nc]) => {
+    if(!grid[nr][nc].eliminated) grid[nr][nc].eliminated = true;
+    if(grid[nr][nc].type === 'angel') grid[nr][nc].chainActivated = true;
   });
 
-  // Count eliminated treasures and check win condition
+  // Chain explosion visuals
+  chainExplosions.forEach(({ r: cr, c: cc }) => {
+    const td = document.querySelector(`[data-row="${cr}"][data-col="${cc}"]`);
+    if(td) setTimeout(() => triggerBombExplosion(td), 300);
+  });
+
+  let treasureCount = 0;
+  allEliminated.forEach(([nr, nc], idx) => {
+    if(grid[nr][nc].type === 'treasure') treasureCount++;
+    setTimeout(() => {
+      const td = document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`);
+      if(td) { td.classList.add('eliminating'); setTimeout(() => updateCell(nr, nc), 380); }
+      else updateCell(nr, nc);
+    }, 40 + idx * 30);
+  });
+
   updateLegendCounts();
+  const animDelay = allEliminated.length * 30 + 400;
   if(treasureCount > 0) {
     setTimeout(() => {
       gameState.treasureFound += treasureCount;
       document.getElementById('treasure-count').textContent = gameState.treasureFound;
       triggerStarRain(false);
-      if(gameState.treasureFound >= gameState.treasureGoal) {
-        setTimeout(showWin, 400);
-      }
-    }, cells.length * 30 + 400);
+      if(gameState.treasureFound >= gameState.treasureGoal) setTimeout(showWin, 400);
+    }, animDelay);
+  }
+  if(chainExplosions.length > 0) {
+    setTimeout(() => showToast(`💥 连锁反应！触发了 ${chainExplosions.length} 个额外爆炸！`), animDelay - 200);
   }
 }
 
@@ -3998,7 +4098,7 @@ function replayWinMap(recordId) {
   gameState = {
     theme: snap.theme, size: snap.size, seed: snap.seed, grid: snap.grid,
     treasureGoal: snap.size===6?3:snap.size===9?6:10,
-    treasureFound: snap.grid.flat().filter(c=>c.type==='treasure'&&c.revealed).length,
+    treasureFound: snap.grid.flat().filter(c=>c.type==='treasure'&&(c.revealed||c.eliminated)).length,
     startTime: Date.now(), elapsed: snap.elapsed,
     completedChallenges: [], revealedCount: snap.grid.flat().filter(c=>c.revealed||c.eliminated).length,
     won: true
@@ -4413,14 +4513,21 @@ async function showSavedGames() {
     }
   });
 
-  // Merge with Supabase — local ALWAYS wins (local is most recently saved)
+  // Merge with Supabase — use savedAt timestamp to pick the newer version
   try {
     const sbSaves = await SB.getSaves(currentUser.name);
     if(sbSaves && sbSaves.length > 0) {
       sbSaves.forEach(s => {
-        // Only add from Supabase if no local version exists (cross-device scenario)
         if(!allSaves[s.save_key]) {
+          // Not in local at all — add from Supabase
           allSaves[s.save_key] = s.data;
+        } else {
+          // Both exist — keep whichever has the newer savedAt
+          const localTs = allSaves[s.save_key].savedAt || 0;
+          const sbTs = s.data?.savedAt || s.saved_at || 0;
+          if(sbTs > localTs) {
+            allSaves[s.save_key] = s.data;
+          }
         }
       });
     }
@@ -4649,21 +4756,25 @@ function renderHistory(filterTheme) {
 
 
 async function loadGameByKey(key) {
-  // Always read freshest data: local first, then Supabase fallback
   const saves = DB.saves();
   let s = saves[currentUser?.name]?.[key];
   // Check individual fallback key
   if(!s) {
     try { s = JSON.parse(localStorage.getItem('xunbao_save_' + currentUser.name + '_' + key)); } catch(e) {}
   }
-  // Fallback to Supabase if nothing local
-  if(!s) {
-    try {
-      const sbSaves = await SB.getSaves(currentUser.name);
-      const found = sbSaves?.find(sv => sv.save_key === key);
-      if(found) s = found.data;
-    } catch(e) {}
-  }
+  // Also check Supabase — pick whichever is newer
+  try {
+    const sbSaves = await SB.getSaves(currentUser.name);
+    const found = sbSaves?.find(sv => sv.save_key === key);
+    if(found) {
+      const sbData = found.data;
+      const localTs = s?.savedAt || 0;
+      const sbTs = sbData?.savedAt || found.saved_at || 0;
+      if(!s || sbTs > localTs) {
+        s = sbData;
+      }
+    }
+  } catch(e) {}
   if(!s) { showToast('找不到存档数据'); return; }
   loadGameData(s);
 }
@@ -4876,6 +4987,8 @@ async function confirmRename() {
 
   // ── Update UI ────────────────────────────────────────────────────────────
   currentUser.name = newName;
+  // Update session so auto-login uses new name after refresh
+  localStorage.setItem('xunbao_session', JSON.stringify({ name: newName, avatar: currentUser.avatar, id: currentUser.id || null }));
   window._cachedHistory = null; // clear cache so history reloads with new name
   document.getElementById('home-username').textContent = newName;
   const wn = document.getElementById('welcome-name');
