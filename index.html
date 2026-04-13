@@ -2197,7 +2197,7 @@ body::before {
       <button onclick="location.reload()" style="font-family:var(--pixel);font-size:7px;padding:6px 16px;border:1.5px solid var(--border);background:var(--bg2);border-radius:3px;cursor:pointer;color:var(--text2);box-shadow:0 2px 0 var(--border);">🔄 刷新网页 <span style="font-family:var(--body);font-size:10px;color:var(--text3);">网页系统近期存在更新</span></button>
     </div>
     <div style="background:rgba(124,92,191,0.08);border:1.5px solid rgba(124,92,191,0.25);border-radius:3px;padding:10px 16px;margin-bottom:12px;line-height:1.8;font-size:13px;">
-      <div style="color:#c04840;font-size:12px;">⚠️ 20260413-1530 版本更新：修复宝物分布随机性、修复连锁反应 — 鞭炮/炸弹触发相邻的炸弹，天使格被波及后可点击。</div>
+      <div style="color:#c04840;font-size:12px;">⚠️ 20260413-1550 版本更新：修复宝物分布随机性、修复连锁反应 — 鞭炮/炸弹触发相邻的炸弹，天使格被波及后可点击、修复排行榜bug。</div>
     </div>
     <div class="welcome-msg">你好，<span id="welcome-name" style="color:#e8960a;font-weight:bold;">侦探</span>，欢迎来到寻找黄金宝物的挑战。<br>请选择主题地图，开启寻宝之旅吧！<br><span style="opacity:0.85;font-size:0.9em"><span class="welcome-star">★</span> 我为你在地图提前埋下了道具，预祝寻宝愉快。<span class="welcome-star">★</span></span></div>
     <div class="section-title">◈ 选择主题开始冒险</div>
@@ -3600,6 +3600,13 @@ function updateCell(r, c) {
 // ===================================
 function onCellClick(r, c) {
   const cell = gameState.grid[r][c];
+
+  // On a completed map: only allow viewing angel hints (read-only), block everything else
+  if(gameState.won) {
+    if(cell.type === 'angel' && (cell.revealed || cell.eliminated)) onAngel(r, c);
+    return;
+  }
+
   // Angel cells that were chain-activated (hit by bomb/firecracker wave) can show hint
   // but still respect the pending draft challenge lock
   if(cell.eliminated && cell.type === 'angel') {
@@ -3629,7 +3636,6 @@ function onCellClick(r, c) {
   const coord = `${COL_LABELS[c]}${r+1}`;
   const confirmEl = document.getElementById('confirm-overlay');
   document.getElementById('confirm-coords').textContent = coord;
-  // Force show the overlay directly
   confirmEl.style.display = 'flex';
   confirmEl.classList.add('show');
 }
@@ -3816,6 +3822,7 @@ function onBomb(r, c) {
   const animDelay = allEliminated.length * 35 + 400;
   if(treasureCount > 0) {
     setTimeout(() => {
+      if(!gameState || gameState.won) return;
       gameState.treasureFound += treasureCount;
       document.getElementById('treasure-count').textContent = gameState.treasureFound;
       triggerStarRain(false);
@@ -3879,6 +3886,7 @@ function eliminateDirection(r, c, dir) {
   const animDelay = allEliminated.length * 30 + 400;
   if(treasureCount > 0) {
     setTimeout(() => {
+      if(!gameState || gameState.won) return;
       gameState.treasureFound += treasureCount;
       document.getElementById('treasure-count').textContent = gameState.treasureFound;
       triggerStarRain(false);
@@ -4145,6 +4153,9 @@ function closeWinStayOnMap() {
 }
 
 function showWin() {
+  // Prevent duplicate win triggers (e.g. from chain reactions or re-loading a won save)
+  if(gameState.won) return;
+  gameState.won = true;
   stopTimer();
   const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
   document.getElementById('win-time').textContent = `⏱ 用时：${fmtTime(elapsed)}`;
@@ -4788,13 +4799,12 @@ function loadGameData(s) {
     theme: s.theme, size: s.size, seed: s.seed, grid: gridClone,
     treasureGoal: s.size === 6 ? 3 : s.size === 9 ? 6 : 10,
     treasureFound: s.treasureFound,
-    // Use saved startTime directly so offline time accumulates correctly
-    // Recalibrate only if startTime is missing (old saves)
     startTime: s.startTime ? s.startTime : (s.elapsed ? Date.now() - s.elapsed * 1000 : null),
     completedChallenges: JSON.parse(JSON.stringify(s.completedChallenges || [])),
     revealedCount: s.revealedCount || 0,
     pendingDraftCell: s.pendingDraftCell || null,
-    pendingBomb: s.pendingBomb || null
+    pendingBomb: s.pendingBomb || null,
+    won: s.won || false   // ← 必须恢复，否则已完成地图会重新触发胜利
   };
   document.getElementById('game-title').textContent = THEME_NAMES[s.theme] + ' 冒险';
   document.getElementById('game-screen').dataset.theme = s.theme;
@@ -4806,17 +4816,35 @@ function loadGameData(s) {
   document.getElementById('challenge-total').textContent = loadedChallengesTotal;
   currentScale = 1;
   document.getElementById('zoom-val').textContent = '100%';
-  // Show current elapsed time, start ticking if game was in progress
+  // Show current elapsed time; only start timer if game is still in progress
   if(s.elapsed) {
     document.getElementById('game-timer').textContent = fmtTime(s.elapsed);
-    startTimer();
   } else {
     document.getElementById('game-timer').textContent = '0s';
+  }
+  if(!s.won) {
+    startTimer();
   }
   renderMap();
   showScreen('game-screen');
   setupMapInteraction();
   setTimeout(updateLegendCounts, 100);
+
+  // If already won, show the locked banner and skip draft/bomb restoration
+  if(s.won) {
+    const header = document.querySelector('#game-screen .game-header');
+    const existing = document.getElementById('win-banner');
+    if(existing) existing.remove();
+    if(header) {
+      const banner = document.createElement('div');
+      banner.id = 'win-banner';
+      banner.style.cssText = 'background:rgba(200,168,64,0.15);border-bottom:2px solid var(--gold);padding:6px 16px;font-family:var(--pixel);font-size:7px;color:var(--gold);text-align:center;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;';
+      banner.innerHTML = '🏆 任务完成！地图已锁定 <span style="display:flex;gap:8px;"><button onclick="goHome()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">返回主页</button><button onclick="showProfile()" style="font-family:var(--pixel);font-size:6px;padding:4px 8px;border:1px solid var(--gold);background:transparent;color:var(--gold);cursor:pointer;border-radius:2px;">查看记录</button></span>';
+      header.insertAdjacentElement('afterend', banner);
+    }
+    return;
+  }
+
   if(s.pendingDraftCell) {
     const { r, c } = s.pendingDraftCell;
     gameState.pendingDraftCell = s.pendingDraftCell;
